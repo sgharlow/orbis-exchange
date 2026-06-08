@@ -4,13 +4,32 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-Pre-implementation. The repository currently contains only `orbis-exchange-spec.md`, the authoritative build contract. There is no `package.json`, source tree, or tooling yet. **`orbis-exchange-spec.md` is the source of truth** — when implementing, follow it; if you must deviate, update the spec in the same change so the two never disagree.
+**Phase 0 (Foundations) complete locally; cloud provisioning pending.** The pnpm monorepo, `@orbis/db` package, `apps/web` vertical slice, and DSQL-safe migrations are built and tested. The live Aurora DSQL cluster + Vercel deploy + cost guardrails are a manual, user-approved step — see `docs/superpowers/runbooks/phase-0-cloud-provisioning.md`. Design spec: `docs/superpowers/specs/2026-06-07-phase-0-foundations-design.md`; plan: `docs/superpowers/plans/2026-06-07-orbis-phase-0-foundations.md`.
+
+**`orbis-exchange-spec.md` is the source of truth** — when implementing, follow it; if you must deviate, update the spec in the same change so the two never disagree.
 
 This is a hackathon entry: **H0 "Hack the Zero Stack," Track 3 (Million-scale Global App). Submission deadline June 29, 2026, 5:00pm PDT.** The schedule and scope discipline in spec §13 and §15 are part of the contract, not suggestions.
 
 ## Commands
 
-None exist yet. Once the Next.js app is scaffolded (planned: v0 → `next` App Router, TypeScript), expect the standard `next dev` / `next build` / `next lint` plus a test runner to be added. **Do not invent or assume commands** — read `package.json` once it exists and update this section with the real scripts (including how to run a single test).
+pnpm monorepo (`apps/web`, `apps/worker`, `packages/db`). Local DB runs in Docker.
+
+- **Local DB:** `docker compose up -d` — Postgres on host **port 5434** (NOT 5432/5433; a system Postgres occupies 5433 on the dev machine). Create the test DB once: `docker compose exec -T postgres psql -U orbis -d orbis -c "CREATE DATABASE orbis_test;"`.
+- **Migrate / seed / smoke (local):** `DATABASE_URL=postgres://orbis:orbis@localhost:5434/orbis pnpm db:migrate` (then `db:seed`, `db:smoke`).
+- **Run the app:** `DATABASE_URL=postgres://orbis:orbis@localhost:5434/orbis pnpm dev` → `localhost:3000` (auto-bumps to 3001 if 3000 is taken).
+- **Tests:** `pnpm -r test` (all packages). DB tests need the env var: `TEST_DATABASE_URL=postgres://orbis:orbis@localhost:5434/orbis_test pnpm --filter @orbis/db test`. Single file: append the file name, e.g. `pnpm --filter @orbis/db test migrate`. Web crypto tests: `pnpm --filter @orbis/web test`.
+- **Lint (typecheck):** `pnpm -r lint` (each package's `lint` is `tsc --noEmit`).
+- **Cloud:** set `DB_MODE=dsql DSQL_HOST=… DSQL_REGION=…` instead of `DATABASE_URL` (see the runbook).
+
+Shell: commands above are bash form; in PowerShell use `$env:VAR='value'; cmd`.
+
+## Implementation conventions (learned in Phase 0 — keep consistent)
+
+- **Money is `BIGINT` in SQL, `string` in TS — never `number`.** `pg` returns `int8` as a string; don't override it.
+- **`@orbis/db` uses NodeNext resolution and explicit `.js` import extensions** in its `.ts` files (so it runs under `tsx`/Node). `apps/web` uses Bundler resolution; it consumes `@orbis/db` via `transpilePackages` + a webpack `extensionAlias` (`.js`→`.ts`) in `next.config.ts`. If Turbopack is ever enabled, add the Turbopack-equivalent resolver.
+- **DSQL migration constraints (authoritative, from AWS docs):** a transaction may contain only **1 DDL statement**, and **DDL and DML must be in separate transactions**. The migration runner (`packages/db/src/migrate.ts`) is mode-aware: on DSQL it runs each statement as its own auto-commit and records `_migrations` separately; on local Postgres it uses one atomic transaction. Migrations must be DDL-only simple statements (no `$$` bodies, no string literals containing `--` or `;`) — the runtime splitter assumes this.
+- **No foreign-key constraints** (DSQL doesn't support them); integrity is app-enforced. Indexes are authored as plain `CREATE INDEX` — the runner rewrites to `CREATE INDEX ASYNC` for DSQL.
+- **DB access pattern:** create a pool with `createPool()`, use it, and **always `await pool.end()` in `finally`**. Route handlers that read the DB set `export const dynamic = "force-dynamic"`. The `/api/health` catch→`{ok:false}`/503 shape is the error-handling standard for new DB routes.
 
 ## Architecture (the big picture)
 
