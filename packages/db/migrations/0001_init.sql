@@ -1,0 +1,1 @@
+CREATE TABLE players (id UUID PRIMARY KEY, handle TEXT NOT NULL);
