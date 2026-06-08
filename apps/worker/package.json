@@ -1,0 +1,14 @@
+{
+  "name": "@orbis/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "test": "echo \"no worker tests yet\"",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": { "@orbis/db": "workspace:*" },
+  "devDependencies": { "tsx": "^4.19.0", "typescript": "^5.6.0" }
+}
