@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { createPool } from "../src/connection.js";
-import { applyMigrations, appliedVersions } from "../src/migrate.js";
+import { applyMigrations, appliedVersions, splitStatements } from "../src/migrate.js";
 
 const pool = createPool();
 
@@ -27,5 +27,31 @@ describe("applyMigrations", () => {
       "SELECT to_regclass('public.players') AS t"
     );
     expect(rows[0].t).toBe("players");
+  });
+});
+
+describe("splitStatements", () => {
+  it("splits multiple statements and ignores comment-only lines", () => {
+    const sql = `-- leading comment
+CREATE TABLE a (id int);
+CREATE TABLE b (id int);
+`;
+    expect(splitStatements(sql)).toEqual([
+      "CREATE TABLE a (id int)",
+      "CREATE TABLE b (id int)",
+    ]);
+  });
+
+  it("does not split on semicolons inside inline comments", () => {
+    // Regression: '-- World cells; demo grid' must not produce a bare 'demo' statement.
+    const sql = `-- World cells; demo grid
+CREATE TABLE cells (id INT);
+`;
+    expect(splitStatements(sql)).toEqual(["CREATE TABLE cells (id INT)"]);
+  });
+
+  it("returns empty array for comment-only / blank input", () => {
+    expect(splitStatements("-- just a comment\n")).toEqual([]);
+    expect(splitStatements("   \n  ")).toEqual([]);
   });
 });

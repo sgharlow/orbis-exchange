@@ -21,6 +21,7 @@ export function createPool(): pg.Pool {
     database: env.database,
     ssl: { rejectUnauthorized: true },
     max: 5,
+    idleTimeoutMillis: 600_000,
     password: async () => signer.getDbConnectAdminAuthToken(),
   });
 }
