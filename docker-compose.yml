@@ -1,0 +1,13 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: orbis
+      POSTGRES_PASSWORD: orbis
+      POSTGRES_DB: orbis
+    ports:
+      - "5433:5432"
+    volumes:
+      - orbis_pg:/var/lib/postgresql/data
+volumes:
+  orbis_pg:
