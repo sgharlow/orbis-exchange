@@ -137,8 +137,8 @@ dist/
 ```
 # Local development (Docker Postgres)
 DB_MODE=local
-DATABASE_URL=postgres://orbis:orbis@localhost:5433/orbis
-TEST_DATABASE_URL=postgres://orbis:orbis@localhost:5433/orbis_test
+DATABASE_URL=postgres://orbis:orbis@localhost:5434/orbis
+TEST_DATABASE_URL=postgres://orbis:orbis@localhost:5434/orbis_test
 
 # Aurora DSQL (cloud) — used when DB_MODE=dsql
 # DB_MODE=dsql
@@ -180,7 +180,7 @@ services:
       POSTGRES_PASSWORD: orbis
       POSTGRES_DB: orbis
     ports:
-      - "5433:5432"
+      - "5434:5432"
     volumes:
       - orbis_pg:/var/lib/postgresql/data
 volumes:
@@ -291,7 +291,7 @@ describe("createPool (local mode)", () => {
 
 - [ ] **Step 6: Run the test to verify it fails**
 
-Run: `TEST_DATABASE_URL=postgres://orbis:orbis@localhost:5433/orbis_test pnpm --filter @orbis/db test`
+Run: `TEST_DATABASE_URL=postgres://orbis:orbis@localhost:5434/orbis_test pnpm --filter @orbis/db test`
 Expected: FAIL — cannot find module `../src/connection.js`.
 
 - [ ] **Step 7: Create `packages/db/src/env.ts`**
@@ -346,7 +346,7 @@ export function createPool(): pg.Pool {
 
 - [ ] **Step 9: Run the test to verify it passes**
 
-Run: `TEST_DATABASE_URL=postgres://orbis:orbis@localhost:5433/orbis_test pnpm --filter @orbis/db test`
+Run: `TEST_DATABASE_URL=postgres://orbis:orbis@localhost:5434/orbis_test pnpm --filter @orbis/db test`
 Expected: PASS.
 
 - [ ] **Step 10: Commit**
@@ -404,7 +404,7 @@ describe("applyMigrations", () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `TEST_DATABASE_URL=postgres://orbis:orbis@localhost:5433/orbis_test pnpm --filter @orbis/db test migrate`
+Run: `TEST_DATABASE_URL=postgres://orbis:orbis@localhost:5434/orbis_test pnpm --filter @orbis/db test migrate`
 Expected: FAIL — cannot find `../src/migrate.js`.
 
 - [ ] **Step 3: Create `packages/db/src/migrate.ts`**
@@ -499,7 +499,7 @@ CREATE INDEX players_by_handle ON players (handle);
 
 - [ ] **Step 5: Run the test to verify it passes**
 
-Run: `TEST_DATABASE_URL=postgres://orbis:orbis@localhost:5433/orbis_test pnpm --filter @orbis/db test migrate`
+Run: `TEST_DATABASE_URL=postgres://orbis:orbis@localhost:5434/orbis_test pnpm --filter @orbis/db test migrate`
 Expected: PASS (both tests).
 
 - [ ] **Step 6: Commit**
@@ -603,12 +603,12 @@ CREATE INDEX trades_by_commodity ON trades (commodity, executed_at);
 
 - [ ] **Step 3: Run the migration tests against a clean DB**
 
-Run: `TEST_DATABASE_URL=postgres://orbis:orbis@localhost:5433/orbis_test pnpm --filter @orbis/db test migrate`
+Run: `TEST_DATABASE_URL=postgres://orbis:orbis@localhost:5434/orbis_test pnpm --filter @orbis/db test migrate`
 Expected: PASS — all 8 tables created, idempotent.
 
 - [ ] **Step 4: Apply migrations to the local dev DB**
 
-Run: `DATABASE_URL=postgres://orbis:orbis@localhost:5433/orbis pnpm db:migrate`
+Run: `DATABASE_URL=postgres://orbis:orbis@localhost:5434/orbis pnpm db:migrate`
 Expected: `applied 0001_init`, `applied 0002_indexes`, `migrations complete`.
 
 - [ ] **Step 5: Commit**
@@ -714,7 +714,7 @@ describe("getLeaderboard", () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `TEST_DATABASE_URL=postgres://orbis:orbis@localhost:5433/orbis_test pnpm --filter @orbis/db test queries`
+Run: `TEST_DATABASE_URL=postgres://orbis:orbis@localhost:5434/orbis_test pnpm --filter @orbis/db test queries`
 Expected: FAIL — cannot find `../src/queries.js`.
 
 - [ ] **Step 3: Create `packages/db/src/queries.ts`**
@@ -739,7 +739,7 @@ export async function getLeaderboard(pool: pg.Pool): Promise<LeaderboardEntry[]>
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run: `TEST_DATABASE_URL=postgres://orbis:orbis@localhost:5433/orbis_test pnpm --filter @orbis/db test queries`
+Run: `TEST_DATABASE_URL=postgres://orbis:orbis@localhost:5434/orbis_test pnpm --filter @orbis/db test queries`
 Expected: PASS.
 
 - [ ] **Step 5: Typecheck the package**
@@ -796,7 +796,7 @@ seed().catch((e) => { console.error(e); process.exit(1); });
 
 - [ ] **Step 2: Run the seed against the local dev DB**
 
-Run: `DATABASE_URL=postgres://orbis:orbis@localhost:5433/orbis pnpm db:seed`
+Run: `DATABASE_URL=postgres://orbis:orbis@localhost:5434/orbis pnpm db:seed`
 Expected: `seed complete`.
 
 - [ ] **Step 3: Verify rows exist**
@@ -851,7 +851,7 @@ export function createPool(): pg.Pool {
 
 - [ ] **Step 2: Verify local tests still pass (no regression)**
 
-Run: `TEST_DATABASE_URL=postgres://orbis:orbis@localhost:5433/orbis_test pnpm --filter @orbis/db test`
+Run: `TEST_DATABASE_URL=postgres://orbis:orbis@localhost:5434/orbis_test pnpm --filter @orbis/db test`
 Expected: PASS — connection, migrate, queries suites all green.
 
 - [ ] **Step 3: Typecheck**
@@ -902,7 +902,7 @@ smoke().catch((e) => { console.error("smoke FAILED:", e.message); process.exit(1
 
 - [ ] **Step 2: Verify the smoke script passes against the local DB**
 
-Run: `DATABASE_URL=postgres://orbis:orbis@localhost:5433/orbis pnpm db:smoke`
+Run: `DATABASE_URL=postgres://orbis:orbis@localhost:5434/orbis pnpm db:smoke`
 Expected: `smoke OK — migrations=[0001_init,0002_indexes] players=2`.
 
 - [ ] **Step 3: Commit**
@@ -1042,7 +1042,7 @@ export async function GET() {
 
 - [ ] **Step 2: Verify the route returns OK against the local DB**
 
-Run (in one terminal): `DATABASE_URL=postgres://orbis:orbis@localhost:5433/orbis pnpm --filter @orbis/web dev`
+Run (in one terminal): `DATABASE_URL=postgres://orbis:orbis@localhost:5434/orbis pnpm --filter @orbis/web dev`
 Run (in another): `curl -s http://localhost:3000/api/health`
 Expected: `{"ok":true,"migrations":["0001_init","0002_indexes"]}`. Stop the dev server after confirming.
 
@@ -1112,7 +1112,7 @@ export default async function Home() {
 
 - [ ] **Step 3: Verify the page and route render seeded data**
 
-Run: `DATABASE_URL=postgres://orbis:orbis@localhost:5433/orbis pnpm --filter @orbis/web dev`
+Run: `DATABASE_URL=postgres://orbis:orbis@localhost:5434/orbis pnpm --filter @orbis/web dev`
 Then: `curl -s http://localhost:3000/api/leaderboard`
 Expected: JSON listing `bot-maker` and `alice`. Visiting `http://localhost:3000` shows the ranked list with `(AI)` next to `bot-maker`. Stop the server after confirming.
 
