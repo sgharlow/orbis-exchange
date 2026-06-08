@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: orbis
       POSTGRES_DB: orbis
     ports:
-      - "5433:5432"
+      - "5434:5432"
     volumes:
       - orbis_pg:/var/lib/postgresql/data
 volumes:
