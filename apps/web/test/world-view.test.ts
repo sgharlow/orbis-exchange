@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { cellColor, legendColor, WORLD_RESOURCE_TYPES } from "../src/lib/world-view.js";
+import {
+  cellColor,
+  legendColor,
+  WORLD_RESOURCE_TYPES,
+  ownershipOf,
+  cellIndexFromPoint,
+} from "../src/lib/world-view.js";
 
 function alphaOf(rgba: string): number {
   const m = rgba.match(/rgba\([^)]*,\s*([0-9.]+)\)$/);
@@ -37,5 +43,28 @@ describe("legendColor", () => {
     for (const t of WORLD_RESOURCE_TYPES) {
       expect(legendColor(t)).toMatch(/^rgb\(\d+, \d+, \d+\)$/);
     }
+  });
+});
+
+describe("ownershipOf", () => {
+  it("classifies unclaimed, mine, and others", () => {
+    expect(ownershipOf(null, "me")).toBe(0);
+    expect(ownershipOf("me", "me")).toBe(1);
+    expect(ownershipOf("you", "me")).toBe(2);
+    expect(ownershipOf("you", null)).toBe(2); // not joined -> everything owned is "other"
+  });
+});
+
+describe("cellIndexFromPoint", () => {
+  it("maps a click to the right grid index", () => {
+    // 640px canvas, 64 cells -> 10px each
+    expect(cellIndexFromPoint(5, 5, 640, 640, 64)).toBe(0); // (0,0)
+    expect(cellIndexFromPoint(15, 5, 640, 640, 64)).toBe(1); // (1,0)
+    expect(cellIndexFromPoint(5, 15, 640, 640, 64)).toBe(64); // (0,1)
+  });
+
+  it("returns null outside the grid", () => {
+    expect(cellIndexFromPoint(-1, 5, 640, 640, 64)).toBeNull();
+    expect(cellIndexFromPoint(5, 700, 640, 640, 64)).toBeNull();
   });
 });

@@ -160,18 +160,20 @@ export async function ensurePlayer(
   );
 }
 
-// One cell as the world view needs it: position, type (for hue), density (for
-// brightness). Read-only render path; keeps owner/id out of the snapshot.
+// One cell as the world view needs it: id (to claim by), position, type (hue),
+// density (brightness), and owner (null = unclaimed; drives the outline).
 export interface WorldCell {
+  id: string;
   x: number;
   y: number;
   resource_type: string;
   density: number;
+  owner_id: string | null;
 }
 
 export async function getWorld(pool: pg.Pool, region: string): Promise<WorldCell[]> {
   const { rows } = await pool.query<WorldCell>(
-    `SELECT x, y, resource_type, density FROM cells WHERE region = $1 ORDER BY y, x`,
+    `SELECT id, x, y, resource_type, density, owner_id FROM cells WHERE region = $1 ORDER BY y, x`,
     [region]
   );
   return rows;

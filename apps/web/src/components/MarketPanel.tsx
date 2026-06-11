@@ -99,9 +99,12 @@ export function MarketPanel({
         body: JSON.stringify({ handle: name }),
       });
       if (res.ok) {
-        const d = (await res.json()) as { handle: string };
+        const d = (await res.json()) as { handle: string; playerId: string };
         setHandle(d.handle);
         window.localStorage.setItem("orbis_handle", d.handle);
+        window.localStorage.setItem("orbis_player_id", d.playerId);
+        // let the world view learn our id so our claimed cells outline brightly
+        window.dispatchEvent(new CustomEvent("orbis:player", { detail: d.playerId }));
         setMsg({ kind: "ok", text: `joined as ${d.handle} · 10,000 credits` });
       } else {
         setMsg({ kind: "err", text: "could not join" });

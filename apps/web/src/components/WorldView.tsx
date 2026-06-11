@@ -2,7 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { WorldCell } from "@orbis/db";
-import { cellColor, legendColor, WORLD_RESOURCE_TYPES } from "@/lib/world-view";
+import {
+  cellColor,
+  legendColor,
+  WORLD_RESOURCE_TYPES,
+  ownershipOf,
+  cellIndexFromPoint,
+} from "@/lib/world-view";
 
 const CELL = 9; // logical px per cell
 const POLL_MS = 3000; // matches the simulation tick (spec §5.2)
@@ -26,27 +32,37 @@ export function WorldView({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [generation, setGeneration] = useState(initialGeneration);
   const [live, setLive] = useState(true);
+  const [claimMsg, setClaimMsg] = useState<{ kind: "ok" | "err" | "info"; text: string } | null>(null);
 
   const size = gridSize(initialCells);
   const n = size * size;
 
-  // Resource type is fixed in Phase 1; density tweens toward the polled target.
   const typesRef = useRef<string[]>([]);
   const displayRef = useRef<Float32Array>(new Float32Array(n));
   const targetRef = useRef<Float32Array>(new Float32Array(n));
+  const idsRef = useRef<string[]>([]); // cell id by index (for claiming)
+  const ownerIdsRef = useRef<(string | null)[]>([]); // owner by index (for outlines)
+  const myIdRef = useRef<string | null>(null);
   const rafRef = useRef<number | null>(null);
+  const redrawRef = useRef<(() => void) | null>(null);
 
-  // Seed the buffers from the server-rendered snapshot once.
+  // Seed the buffers from the server-rendered snapshot once (no window access).
   if (typesRef.current.length === 0) {
     const types = new Array<string>(n).fill("ore");
+    const ids = new Array<string>(n).fill("");
+    const owners = new Array<string | null>(n).fill(null);
     const display = displayRef.current;
     for (const c of initialCells) {
       const i = c.y * size + c.x;
       types[i] = c.resource_type;
+      ids[i] = c.id;
+      owners[i] = c.owner_id;
       display[i] = c.density;
       targetRef.current[i] = c.density;
     }
     typesRef.current = types;
+    idsRef.current = ids;
+    ownerIdsRef.current = owners;
   }
 
   useEffect(() => {
@@ -54,6 +70,8 @@ export function WorldView({
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+
+    myIdRef.current = window.localStorage.getItem("orbis_player_id");
 
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const dim = size * CELL;
@@ -66,15 +84,23 @@ export function WorldView({
       ctx.fillRect(0, 0, dim, dim);
       const types = typesRef.current;
       const display = displayRef.current;
+      const owners = ownerIdsRef.current;
+      const me = myIdRef.current;
       for (let i = 0; i < n; i++) {
         const x = (i % size) * CELL;
         const y = Math.floor(i / size) * CELL;
         ctx.fillStyle = cellColor(types[i], display[i]);
         ctx.fillRect(x, y, CELL - 0.6, CELL - 0.6); // tiny gap reads as a grid
+        const own = ownershipOf(owners[i], me);
+        if (own !== 0) {
+          ctx.strokeStyle = own === 1 ? "rgba(238,243,255,0.95)" : "rgba(150,170,210,0.5)";
+          ctx.lineWidth = own === 1 ? 1.5 : 1;
+          ctx.strokeRect(x + 0.75, y + 0.75, CELL - 2.1, CELL - 2.1);
+        }
       }
     };
+    redrawRef.current = draw;
 
-    // Ease displayed density toward target; stop the loop once settled.
     const step = () => {
       const display = displayRef.current;
       const target = targetRef.current;
@@ -89,7 +115,6 @@ export function WorldView({
       draw();
       rafRef.current = moving ? requestAnimationFrame(step) : null;
     };
-
     const kick = () => {
       if (rafRef.current === null) rafRef.current = requestAnimationFrame(step);
     };
@@ -99,9 +124,7 @@ export function WorldView({
     let cancelled = false;
     const poll = async () => {
       try {
-        const res = await fetch(`/api/world?region=${encodeURIComponent(region)}`, {
-          cache: "no-store",
-        });
+        const res = await fetch(`/api/world?region=${encodeURIComponent(region)}`, { cache: "no-store" });
         if (!res.ok) {
           setLive(false);
           return;
@@ -111,17 +134,23 @@ export function WorldView({
         setLive(true);
         setGeneration(data.generation);
         const target = targetRef.current;
-        for (const c of data.cells) target[c.y * size + c.x] = c.density;
+        const owners = ownerIdsRef.current;
+        const ids = idsRef.current;
+        for (const c of data.cells) {
+          const i = c.y * size + c.x;
+          target[i] = c.density;
+          owners[i] = c.owner_id; // refresh ownership outlines
+          ids[i] = c.id;
+        }
         kick();
+        draw(); // ensure ownership repaint even if densities are settled
       } catch {
         if (!cancelled) setLive(false);
       }
     };
-
     const id = setInterval(poll, POLL_MS);
 
-    // Realtime: apply cell deltas the instant a tick lands (spec §5.3). The poll
-    // above stays as a fallback for clients where SSE drops.
+    // Realtime cell-density deltas (spec §5.3); poll above is the fallback.
     const es = new EventSource(`/api/stream?region=${encodeURIComponent(region)}`);
     es.addEventListener("world", (ev) => {
       try {
@@ -139,24 +168,73 @@ export function WorldView({
       }
     });
 
+    // When the viewer joins the market (in MarketPanel), learn their id so their
+    // own cells outline brightly.
+    const onPlayer = (e: Event) => {
+      myIdRef.current = (e as CustomEvent<string>).detail;
+      draw();
+    };
+    window.addEventListener("orbis:player", onPlayer);
+
     return () => {
       cancelled = true;
       clearInterval(id);
       es.close();
+      window.removeEventListener("orbis:player", onPlayer);
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
   }, [region, size, n]);
+
+  async function handleClaim(e: React.MouseEvent<HTMLCanvasElement>) {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const idx = cellIndexFromPoint(e.clientX - rect.left, e.clientY - rect.top, rect.width, rect.height, size);
+    if (idx === null) return;
+    const cellId = idsRef.current[idx];
+    if (!cellId) return;
+
+    setClaimMsg({ kind: "info", text: "claiming…" });
+    try {
+      const res = await fetch("/api/claims", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ cell_id: cellId }),
+      });
+      if (res.status === 401) {
+        setClaimMsg({ kind: "err", text: "join via the market panel to claim cells" });
+        return;
+      }
+      const data = await res.json();
+      if (data.claimed) {
+        ownerIdsRef.current[idx] = myIdRef.current ?? window.localStorage.getItem("orbis_player_id");
+        redrawRef.current?.();
+        setClaimMsg({ kind: "ok", text: `claimed cell ${cellId} — it now mines for you` });
+      } else {
+        const r = data.reason;
+        setClaimMsg({
+          kind: "err",
+          text: r === "taken" ? "already claimed" : r === "insufficient_credits" ? "not enough credits (500)" : "could not claim",
+        });
+      }
+    } catch {
+      setClaimMsg({ kind: "err", text: "network error" });
+    }
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1rem", alignItems: "center" }}>
       <canvas
         ref={canvasRef}
-        aria-label={`Living resource field for region ${region}, ${size} by ${size} cells`}
+        onClick={handleClaim}
+        title="Click a cell to claim it"
+        aria-label={`Living resource field for region ${region}, ${size} by ${size} cells. Click a cell to claim it.`}
         style={{
           width: "min(72vmin, 620px)",
           height: "min(72vmin, 620px)",
           borderRadius: 10,
           background: FIELD_BG,
+          cursor: "crosshair",
           boxShadow:
             "0 0 0 1px rgba(120,160,220,0.18), 0 0 60px rgba(40,120,200,0.15), inset 0 0 80px rgba(0,0,0,0.6)",
         }}
@@ -177,6 +255,13 @@ export function WorldView({
           </span>
         </span>
       </div>
+      <div className="claim-line">
+        {claimMsg ? (
+          <span className={`claim-msg ${claimMsg.kind}`}>{claimMsg.text}</span>
+        ) : (
+          <span className="claim-hint">click a cell to claim it — claimed cells mine resources each tick</span>
+        )}
+      </div>
       <ul className="legend" aria-label="Resource legend">
         {WORLD_RESOURCE_TYPES.map((t) => (
           <li key={t} className="legend-item">
@@ -184,6 +269,10 @@ export function WorldView({
             {t}
           </li>
         ))}
+        <li className="legend-item">
+          <span className="legend-swatch legend-own" />
+          your cell
+        </li>
       </ul>
     </div>
   );

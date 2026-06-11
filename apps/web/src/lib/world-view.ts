@@ -39,3 +39,26 @@ export function legendColor(resourceType: string): string {
   const [r, g, b] = baseRgb(resourceType);
   return `rgb(${r}, ${g}, ${b})`;
 }
+
+// Cell ownership relative to the viewer: 0 = unclaimed, 1 = mine, 2 = someone else.
+export type Ownership = 0 | 1 | 2;
+export function ownershipOf(ownerId: string | null, myId: string | null): Ownership {
+  if (!ownerId) return 0;
+  return myId !== null && ownerId === myId ? 1 : 2;
+}
+
+// Map a click position (relative to the rendered canvas) to a grid index, or null
+// if outside the grid. pixelW/pixelH are the canvas's displayed CSS size.
+export function cellIndexFromPoint(
+  offsetX: number,
+  offsetY: number,
+  pixelW: number,
+  pixelH: number,
+  size: number
+): number | null {
+  if (offsetX < 0 || offsetY < 0 || offsetX >= pixelW || offsetY >= pixelH) return null;
+  const x = Math.floor((offsetX / pixelW) * size);
+  const y = Math.floor((offsetY / pixelH) * size);
+  if (x < 0 || x >= size || y < 0 || y >= size) return null;
+  return y * size + x;
+}

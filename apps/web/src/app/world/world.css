@@ -176,6 +176,34 @@ body {
   box-shadow: 0 0 9px currentColor;
 }
 
+.legend-own {
+  background: transparent;
+  border: 1.5px solid rgba(238, 243, 255, 0.95);
+  box-shadow: none;
+}
+
+/* claim status line under the world canvas */
+.claim-line {
+  min-height: 1.1em;
+  text-align: center;
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+}
+.claim-hint {
+  color: #5f7aa6;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+}
+.claim-msg.ok {
+  color: #49e09a;
+}
+.claim-msg.err {
+  color: #f5a623;
+}
+.claim-msg.info {
+  color: #8b9bbd;
+}
+
 .world-foot {
   font-size: 0.64rem;
   letter-spacing: 0.18em;
