@@ -45,7 +45,39 @@ body {
   align-items: center;
   gap: clamp(1.25rem, 3vw, 2rem);
   width: 100%;
-  max-width: 760px;
+  max-width: 1180px;
+}
+
+/* two panels: the living world and the global market, one screen */
+.panels {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  gap: clamp(1rem, 2.5vw, 2rem);
+  width: 100%;
+  align-items: start;
+}
+
+@media (max-width: 880px) {
+  .panels {
+    grid-template-columns: 1fr;
+  }
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.panel-h {
+  margin: 0;
+  align-self: flex-start;
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: #6f86b3;
 }
 
 .world-header {
@@ -150,4 +182,276 @@ body {
   text-transform: uppercase;
   color: #5a6a8c;
   text-align: center;
+}
+
+/* ---- market panel ---- */
+.market {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1rem 1.1rem 1.2rem;
+  border: 1px solid rgba(120, 160, 220, 0.16);
+  border-radius: 12px;
+  background: rgba(14, 22, 40, 0.55);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 0 50px rgba(20, 60, 120, 0.12), inset 0 0 60px rgba(0, 0, 0, 0.35);
+}
+
+.commodity-tabs {
+  display: flex;
+  gap: 0.4rem;
+}
+.commodity-tab {
+  flex: 1;
+  padding: 0.4rem 0;
+  font: inherit;
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #8b9bbd;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(120, 160, 220, 0.14);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.commodity-tab:hover {
+  color: #dce6fa;
+}
+.commodity-tab[data-active="true"] {
+  color: #06080f;
+  background: var(--hue);
+  border-color: var(--hue);
+  box-shadow: 0 0 14px -2px var(--hue);
+  font-weight: 500;
+}
+
+.price-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.price-block {
+  display: flex;
+  flex-direction: column;
+}
+.price-last {
+  font-size: 1.9rem;
+  font-weight: 500;
+  color: #eef3ff;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.price-unit {
+  margin-top: 0.3rem;
+  font-size: 0.56rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #5f7aa6;
+}
+.spark {
+  opacity: 0.9;
+}
+
+.book {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.74rem;
+}
+.book-side {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.book-row {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  padding: 0.18rem 0.5rem;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.depth {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  z-index: 0;
+}
+.depth-ask {
+  background: rgba(245, 110, 90, 0.14);
+}
+.depth-bid {
+  background: rgba(64, 224, 148, 0.14);
+}
+.book-price,
+.book-qty {
+  position: relative;
+  z-index: 1;
+}
+.book-price.ask {
+  color: #f3897a;
+}
+.book-price.bid {
+  color: #49e09a;
+}
+.book-qty {
+  color: #93a3c4;
+}
+.book-empty {
+  padding: 0.35rem 0.5rem;
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #506084;
+}
+.book-spread {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.3rem 0.5rem;
+  margin: 2px 0;
+  font-size: 0.58rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #6f86b3;
+  border-top: 1px solid rgba(120, 160, 220, 0.12);
+  border-bottom: 1px solid rgba(120, 160, 220, 0.12);
+}
+.book-spread-val {
+  color: #c9d4e8;
+}
+
+.ticket {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.ticket-inputs {
+  display: flex;
+  gap: 0.5rem;
+}
+.field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.56rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #6f86b3;
+}
+.field input,
+.join input {
+  font: inherit;
+  font-size: 0.95rem;
+  color: #eef3ff;
+  background: rgba(5, 9, 17, 0.7);
+  border: 1px solid rgba(120, 160, 220, 0.2);
+  border-radius: 6px;
+  padding: 0.45rem 0.6rem;
+  outline: none;
+}
+.field input:focus,
+.join input:focus {
+  border-color: rgba(96, 156, 240, 0.6);
+}
+.ticket-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+.btn {
+  flex: 1;
+  font: inherit;
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 500;
+  padding: 0.6rem 0;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: filter 0.15s, transform 0.05s;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.btn:not(:disabled):active {
+  transform: translateY(1px);
+}
+.btn-buy {
+  color: #04140c;
+  background: #40e094;
+  box-shadow: 0 0 16px -4px #40e094;
+}
+.btn-sell {
+  color: #1a0606;
+  background: #f3897a;
+  box-shadow: 0 0 16px -4px #f3897a;
+}
+.btn-join {
+  width: 100%;
+  color: #06080f;
+  background: #38e0f5;
+  box-shadow: 0 0 16px -4px #38e0f5;
+}
+.join {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.ticket-who {
+  font-size: 0.56rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #5f7aa6;
+}
+.ticket-msg {
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+}
+.ticket-msg.ok {
+  color: #49e09a;
+}
+.ticket-msg.err {
+  color: #f5a623;
+}
+
+.tape {
+  list-style: none;
+  margin: 0;
+  padding: 0.6rem 0 0;
+  border-top: 1px solid rgba(120, 160, 220, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.72rem;
+}
+.tape-row {
+  display: flex;
+  gap: 0.4rem;
+  color: #aebbd6;
+  animation: tape-in 0.5s ease;
+}
+.tape-at {
+  color: #506084;
+}
+.tape-price {
+  color: #eef3ff;
+}
+@keyframes tape-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }

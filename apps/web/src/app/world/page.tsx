@@ -1,6 +1,7 @@
-import { createPool, getWorld, getLatestGeneration } from "@orbis/db";
+import { createPool, getWorld, getLatestGeneration, getMarket } from "@orbis/db";
 import { Fraunces, IBM_Plex_Mono } from "next/font/google";
 import { WorldView } from "@/components/WorldView";
+import { MarketPanel } from "@/components/MarketPanel";
 import "./world.css";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +14,7 @@ export default async function WorldPage() {
   try {
     const cells = await getWorld(pool, "r0");
     const generation = await getLatestGeneration(pool);
+    const market = await getMarket(pool, "ore");
     return (
       <main className={`${mono.className} world-page`}>
         <div className="world-frame">
@@ -20,12 +22,21 @@ export default async function WorldPage() {
             <p className="world-eyebrow">Aurora DSQL · one ledger · one living world</p>
             <h1 className={`${display.className} world-title`}>Orbis Exchange</h1>
             <p className="world-sub">
-              region r0 · {cells.length} cells · resource density evolving by cellular automaton
+              region r0 · {cells.length} cells · AI and humans trading on one consistent ledger
             </p>
           </header>
-          <WorldView region="r0" initialCells={cells} initialGeneration={generation} />
+          <div className="panels">
+            <section className="panel" aria-label="World">
+              <h2 className="panel-h">The Living World</h2>
+              <WorldView region="r0" initialCells={cells} initialGeneration={generation} />
+            </section>
+            <section className="panel" aria-label="Market">
+              <h2 className="panel-h">The Global Market</h2>
+              <MarketPanel initialCommodity="ore" initialMarket={market} />
+            </section>
+          </div>
           <footer className="world-foot">
-            brightness = abundance · depleted regions fade · the field re-reads the ledger every 3s
+            density = abundance · the field and the book are the same ledger, seen two ways
           </footer>
         </div>
       </main>
