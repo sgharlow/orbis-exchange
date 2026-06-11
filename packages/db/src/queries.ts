@@ -1,14 +1,17 @@
 import type pg from "pg";
 import type { LeaderboardEntry } from "./types.js";
 
-// Net worth = credits + inventory valued at last market price.
-// In Phase 0 inventory is empty, so net worth = credits. The inventory join
-// is added in a later phase; keeping credits-only here is intentional.
+// Net worth = credits + inventory valued at last market price (spec §4.3).
+// Commodities with no trade yet have a NULL last_price and contribute nothing.
 export async function getLeaderboard(pool: pg.Pool): Promise<LeaderboardEntry[]> {
   const { rows } = await pool.query<LeaderboardEntry>(
-    `SELECT id, handle, kind, credits AS net_worth
-       FROM players
-      ORDER BY credits DESC, handle ASC
+    `SELECT p.id, p.handle, p.kind,
+            (p.credits + COALESCE(SUM(i.qty * ms.last_price), 0))::text AS net_worth
+       FROM players p
+       LEFT JOIN inventory i ON i.player_id = p.id
+       LEFT JOIN market_state ms ON ms.commodity = i.commodity
+      GROUP BY p.id, p.handle, p.kind, p.credits
+      ORDER BY (p.credits + COALESCE(SUM(i.qty * ms.last_price), 0)) DESC, p.handle ASC
       LIMIT 100`
   );
   return rows;
