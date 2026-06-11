@@ -106,6 +106,13 @@ for each cell c:
 # commit all next_density values simultaneously, then clear extraction_pressure
 ```
 
+**Implementation notes (Phase 1, `apps/worker/src/ca.ts`).** Two points the pseudocode leaves open are fixed as follows so spec and code agree:
+
+- `average_neighbor_density(c)` is the mean density over **all present Moore neighbors** of `c` (fewer than 8 at grid edges; 0 if isolated).
+- `seed_lowest_adjacent(c)` adds `BLOOM_SEED_BONUS = 25` to the **lowest-density present neighbor** (ties broken by smallest `x`, then smallest `y`). It is applied during the synchronous commit, after every cell's branch is computed and **before** the final per-cell extraction draw.
+- Commit order per cell: branch result → seed bonuses → minus `extraction_pressure` → `round` → `clamp(0, 100)`. Densities persist as integers (`SMALLINT`), so the float result is rounded then clamped.
+- The engine is pure: it reads an immutable snapshot, never mutates the input, and returns both the full next grid and the **changed-cell deltas** (the delta set is what the worker persists — never the full grid; §5.2/§11).
+
 Two emergent behaviors fall out of this for free. Rich regions spread outward until they overcrowd and collapse, and heavily mined regions deplete and trigger local cascades. Both move scarcity around the map, which is what keeps the market interesting without any hand-authored supply curve.
 
 ### 4.3 The single global market
