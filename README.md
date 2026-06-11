@@ -19,6 +19,7 @@ opponent on one net-worth leaderboard.
 - 📖 **[How to Play (PDF)](docs/how-to-play.pdf)** — the illustrated guide.
 - 🏗 **[Architecture](docs/architecture.md)** — diagram + the DSQL story.
 - 🚀 **[Devpost submission](docs/devpost-submission.md)** — write-up + checklist.
+- 🎬 **[Demo video script & shot-list](docs/demo-video-script.md)** — recording-ready.
 
 ## How it works
 
