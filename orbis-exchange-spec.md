@@ -72,6 +72,17 @@ The world is a grid of cells. For the demo the visible map is 64 by 64, partitio
 - An owner, either unclaimed or a reference to a participant.
 - A last-updated generation marker for delta persistence.
 
+**Implementation notes (Phase 1, `packages/db/src/world.ts`).** The `cells.id`
+encoding (spec §6 says "encodes region + x + y") is fixed as
+`id = regionOrdinal * REGION_STRIDE + y * GRID_DIM + x`, with `GRID_DIM = 64` and
+`REGION_STRIDE = GRID_DIM * GRID_DIM` — unique and reversible for `0 <= x,y < 64`.
+Region strings are `r{ordinal}`. The bounded demo world is a single 64×64 region
+(4096 cells; cost guardrail §11). Initial densities and resource types are
+generated deterministically (a fixed integer hash, no randomness) so a seeded
+world is reproducible. The tick write path (`runTick` → `persistTick`) reuses the
+row id loaded from the DB, so no decoding is needed on writes — only the seed
+encodes ids.
+
 ### 4.2 Cellular-automaton resource rules
 
 Density evolves by local rules applied every tick. A neighbor is healthy if its density is at or above a healthy threshold. The intent mirrors Conway: too few healthy neighbors causes withering, a balanced neighborhood causes regeneration and bloom, and overcrowding causes collapse. Extraction is a separate downward pressure layered on top.
