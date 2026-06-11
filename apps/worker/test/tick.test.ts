@@ -25,7 +25,7 @@ afterAll(async () => {
 describe("runTick (load -> CA -> persist deltas)", () => {
   it("persists only changed cells, stamps the generation, and records the tick", async () => {
     const result = await runTick(pool, "rt", 1);
-    expect(result).toEqual({ generation: 1, cellsChanged: 3 });
+    expect(result).toEqual({ generation: 1, cellsChanged: 3, mined: 0 }); // no owned cells
 
     const { rows } = await pool.query(
       "SELECT id, density, updated_gen FROM cells ORDER BY id"
@@ -47,5 +47,27 @@ describe("runTick (load -> CA -> persist deltas)", () => {
     await runTick(pool, "rt", 1, { extraction: ext });
     const { rows } = await pool.query("SELECT density FROM cells WHERE id = 2");
     expect(rows[0].density).toBe(50);
+  });
+
+  it("mines owned cells: credits the owner's inventory and depletes the cell", async () => {
+    await pool.query(
+      `INSERT INTO players (id, handle, kind, credits, home_region, created_at)
+         VALUES ('c0000000-0000-0000-0000-000000000001','miner','human',1000,'us-east', now())`
+    );
+    await pool.query(
+      `INSERT INTO cells (id, region, x, y, resource_type, density, owner_id, updated_gen)
+         VALUES (9,'rm',5,5,'ore',80,'c0000000-0000-0000-0000-000000000001',0)`
+    );
+
+    const result = await runTick(pool, "rm", 1);
+    expect(result.mined).toBe(8); // floor(80 * 0.1)
+
+    const inv = await pool.query(
+      "SELECT qty FROM inventory WHERE player_id='c0000000-0000-0000-0000-000000000001' AND commodity='ore'"
+    );
+    expect(inv.rows[0].qty).toBe("8");
+    // lone cell withers (-6) and is mined (-8): 80 -> 66
+    const cell = await pool.query("SELECT density, updated_gen FROM cells WHERE id = 9");
+    expect(cell.rows[0]).toEqual({ density: 66, updated_gen: "1" });
   });
 });

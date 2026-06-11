@@ -17,6 +17,7 @@ const AGENTS = [
   { id: "a0000000-0000-0000-0000-0000000000a4", handle: "mm-rare", strategy: "maker", params: { commodity: "rare", size: 5, margin: 2 } },
   { id: "a0000000-0000-0000-0000-0000000000a5", handle: "momentum-ore", strategy: "momentum", params: { commodity: "ore", size: 3, lookback: 5 } },
   { id: "a0000000-0000-0000-0000-0000000000a6", handle: "value-ore", strategy: "value", params: { commodity: "ore", size: 3, band: 0.04, lookback: 10 } },
+  { id: "a0000000-0000-0000-0000-0000000000a7", handle: "scout-r0", strategy: "scout", params: { commodity: "ore", size: 1, region: "r0" } },
 ] as const;
 
 async function seedAgents(pool: pg.Pool): Promise<void> {

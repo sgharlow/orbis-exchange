@@ -10,6 +10,10 @@ export {
   ensurePlayer,
   STARTING_CREDITS,
   loadAgents,
+  claimCell,
+  findClaimableCell,
+  persistYields,
+  CLAIM_COST,
 } from "./queries.js";
 export type { RegionCell, CellUpdate, WorldCell, AgentRow } from "./queries.js";
 export {

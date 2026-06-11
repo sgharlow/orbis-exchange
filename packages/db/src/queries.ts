@@ -18,28 +18,119 @@ export async function getLeaderboard(pool: pg.Pool): Promise<LeaderboardEntry[]>
 }
 
 // One cell as the simulation worker needs it for a tick: id (BIGINT -> string
-// from pg), grid coordinates, and current density. x/y/density are INT/SMALLINT
-// so pg returns them as numbers.
+// from pg), grid coordinates, current density, owner (null = unclaimed), and
+// resource type (so mining credits the right commodity). x/y/density are
+// INT/SMALLINT so pg returns them as numbers.
 export interface RegionCell {
   id: string;
   x: number;
   y: number;
   density: number;
+  owner_id: string | null;
+  resource_type: string;
 }
 
 export async function loadRegionCells(pool: pg.Pool, region: string): Promise<RegionCell[]> {
   const { rows } = await pool.query<RegionCell>(
-    `SELECT id, x, y, density FROM cells WHERE region = $1 ORDER BY y, x`,
+    `SELECT id, x, y, density, owner_id, resource_type FROM cells WHERE region = $1 ORDER BY y, x`,
     [region]
   );
   return rows;
+}
+
+// Cost in credits to claim an unclaimed cell (spec §4.4).
+export const CLAIM_COST = 500;
+
+// Claim an unclaimed cell: assert it is unowned and the player can afford it,
+// set ownership and debit credits, all in one transaction (conditional writes,
+// DSQL-safe). No double-claim, no negative balance.
+export async function claimCell(
+  pool: pg.Pool,
+  playerId: string,
+  cellId: string | number
+): Promise<{ claimed: boolean; reason?: "taken" | "insufficient_credits" | "unknown_cell" }> {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const claim = await client.query(
+      "UPDATE cells SET owner_id = $1 WHERE id = $2 AND owner_id IS NULL",
+      [playerId, cellId]
+    );
+    if ((claim.rowCount ?? 0) === 0) {
+      const exists = await client.query("SELECT 1 FROM cells WHERE id = $1", [cellId]);
+      await client.query("ROLLBACK");
+      return { claimed: false, reason: (exists.rowCount ?? 0) > 0 ? "taken" : "unknown_cell" };
+    }
+    const debit = await client.query(
+      "UPDATE players SET credits = credits - $1::bigint WHERE id = $2 AND credits >= $1::bigint",
+      [CLAIM_COST, playerId]
+    );
+    if ((debit.rowCount ?? 0) === 0) {
+      await client.query("ROLLBACK");
+      return { claimed: false, reason: "insufficient_credits" };
+    }
+    await client.query("COMMIT");
+    return { claimed: true };
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+// The most attractive unclaimed cell in a region (highest density) — what a
+// scout agent goes after.
+export async function findClaimableCell(
+  pool: pg.Pool,
+  region: string
+): Promise<{ id: string; density: number } | null> {
+  const { rows } = await pool.query<{ id: string; density: number }>(
+    `SELECT id, density FROM cells
+       WHERE region = $1 AND owner_id IS NULL
+       ORDER BY density DESC, id ASC LIMIT 1`,
+    [region]
+  );
+  return rows[0] ?? null;
+}
+
+// Credit mined resource to owners' inventories (one short transaction).
+export async function persistYields(
+  pool: pg.Pool,
+  yields: { player_id: string; commodity: string; qty: number }[]
+): Promise<void> {
+  if (yields.length === 0) return;
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    for (const y of yields) {
+      await client.query(
+        `INSERT INTO inventory (player_id, commodity, qty) VALUES ($1, $2, $3::bigint)
+           ON CONFLICT (player_id, commodity) DO UPDATE SET qty = inventory.qty + EXCLUDED.qty`,
+        [y.player_id, y.commodity, y.qty]
+      );
+    }
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 // An agent and its owning player's spendable balance, for the agent runner.
 export interface AgentRow {
   player_id: string;
   strategy: string;
-  params: { commodity: string; size: number; margin?: number; band?: number; lookback?: number };
+  params: {
+    commodity: string;
+    size: number;
+    margin?: number;
+    band?: number;
+    lookback?: number;
+    region?: string;
+  };
   credits: string;
 }
 

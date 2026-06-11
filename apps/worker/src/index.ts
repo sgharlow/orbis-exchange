@@ -25,7 +25,8 @@ async function main(): Promise<void> {
       const tick = await runTick(pool, REGION, generation);
       const agents = await runAgents(pool);
       console.log(
-        `gen ${generation}: ${tick.cellsChanged} cells changed, agents placed ${agents.placed} / filled ${agents.fills}`
+        `gen ${generation}: ${tick.cellsChanged} cells changed, mined ${tick.mined}; ` +
+          `agents placed ${agents.placed} / filled ${agents.fills} / claimed ${agents.claimed}`
       );
     } catch (err) {
       console.error(`gen ${generation} failed:`, (err as Error).message);

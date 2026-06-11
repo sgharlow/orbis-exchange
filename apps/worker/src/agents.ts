@@ -13,6 +13,7 @@ export interface AgentParams {
   margin?: number; // maker: credits offset from the reference price
   band?: number; // value: fractional deviation from the mean to act on
   lookback?: number; // momentum/value: trades to consider
+  region?: string; // scout: which region to claim cells in (default r0)
 }
 
 export interface AgentContext {

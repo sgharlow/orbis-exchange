@@ -7,6 +7,7 @@ const pool = createPool();
 const MAKER = "a0000000-0000-0000-0000-000000000001";
 const VALUE = "a0000000-0000-0000-0000-000000000002";
 const SELLER = "b0000000-0000-0000-0000-000000000003";
+const SCOUT = "a0000000-0000-0000-0000-000000000004";
 
 async function addAgent(id: string, handle: string, strategy: string, params: object, credits = 100000) {
   await pool.query(
@@ -84,5 +85,21 @@ describe("runAgents", () => {
     expect(inv.rows[0].qty).toBe("4");
     const sellerCredits = await pool.query("SELECT credits FROM players WHERE id = $1", [SELLER]);
     expect(sellerCredits.rows[0].credits).toBe("380"); // 4 * 95
+  });
+
+  it("a scout claims the highest-density unclaimed cell in its region", async () => {
+    await addAgent(SCOUT, "scout", "scout", { commodity: "ore", size: 1, region: "r0" });
+    await pool.query(
+      `INSERT INTO cells (id, region, x, y, resource_type, density, owner_id, updated_gen) VALUES
+         (10,'r0',0,0,'ore',40,NULL,0),
+         (11,'r0',1,0,'ore',88,NULL,0),
+         (12,'r0',2,0,'ore',60,NULL,0)`
+    );
+
+    const res = await runAgents(pool);
+    expect(res.claimed).toBe(1);
+
+    const owned = await pool.query("SELECT id FROM cells WHERE owner_id = $1", [SCOUT]);
+    expect(owned.rows).toEqual([{ id: "11" }]); // density 88 is the best
   });
 });
