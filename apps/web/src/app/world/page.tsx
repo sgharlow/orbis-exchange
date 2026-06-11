@@ -1,7 +1,9 @@
-import { createPool, getWorld, getLatestGeneration, getMarket } from "@orbis/db";
+import { createPool, getWorld, getLatestGeneration, getMarket, getLeaderboard } from "@orbis/db";
 import { Fraunces, IBM_Plex_Mono } from "next/font/google";
 import { WorldView } from "@/components/WorldView";
 import { MarketPanel } from "@/components/MarketPanel";
+import { PlayerDashboard } from "@/components/PlayerDashboard";
+import { LeaderboardPanel } from "@/components/LeaderboardPanel";
 import "./world.css";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +17,7 @@ export default async function WorldPage() {
     const cells = await getWorld(pool, "r0");
     const generation = await getLatestGeneration(pool);
     const market = await getMarket(pool, "ore");
+    const leaderboard = await getLeaderboard(pool);
     return (
       <main className={`${mono.className} world-page`}>
         <div className="world-frame">
@@ -32,9 +35,11 @@ export default async function WorldPage() {
             </section>
             <section className="panel" aria-label="Market">
               <h2 className="panel-h">The Global Market</h2>
+              <PlayerDashboard />
               <MarketPanel initialCommodity="ore" initialMarket={market} />
             </section>
           </div>
+          <LeaderboardPanel initial={leaderboard} />
           <footer className="world-foot">
             density = abundance · the field and the book are the same ledger, seen two ways
           </footer>

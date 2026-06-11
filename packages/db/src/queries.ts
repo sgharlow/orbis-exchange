@@ -79,6 +79,75 @@ export async function claimCell(
   }
 }
 
+// Everything the player dashboard shows: balance, extraction level, holdings,
+// and how many cells they own (spec §10).
+export interface PlayerState {
+  handle: string;
+  credits: string;
+  level: number;
+  inventory: { commodity: string; qty: string }[];
+  owned_cells: number;
+}
+
+export async function getPlayerState(pool: pg.Pool, playerId: string): Promise<PlayerState | null> {
+  const p = await pool.query<{ handle: string; credits: string; level: number }>(
+    "SELECT handle, credits, COALESCE(extract_level, 0) AS level FROM players WHERE id = $1",
+    [playerId]
+  );
+  if (!p.rows[0]) return null;
+  const inv = await pool.query<{ commodity: string; qty: string }>(
+    "SELECT commodity, qty FROM inventory WHERE player_id = $1 AND qty > 0 ORDER BY commodity",
+    [playerId]
+  );
+  const owned = await pool.query<{ n: number }>(
+    "SELECT count(*)::int AS n FROM cells WHERE owner_id = $1",
+    [playerId]
+  );
+  return {
+    handle: p.rows[0].handle,
+    credits: p.rows[0].credits,
+    level: p.rows[0].level,
+    inventory: inv.rows,
+    owned_cells: owned.rows[0].n,
+  };
+}
+
+// Base credit cost to raise extraction by one level; the Nth upgrade costs N×base.
+export const INVEST_BASE_COST = 1000;
+
+// Buy one extraction level: escalating cost computed + asserted in one statement
+// (DSQL-safe OCC). Returns the new level + balance, or why it failed.
+export async function investExtraction(
+  pool: pg.Pool,
+  playerId: string
+): Promise<{ ok: true; level: number; credits: string } | { ok: false; reason: "insufficient_credits" | "unknown_player" }> {
+  const { rows } = await pool.query<{ extract_level: number; credits: string }>(
+    `UPDATE players
+        SET extract_level = COALESCE(extract_level, 0) + 1,
+            credits = credits - ((COALESCE(extract_level, 0) + 1) * $2::bigint)
+      WHERE id = $1 AND credits >= ((COALESCE(extract_level, 0) + 1) * $2::bigint)
+      RETURNING extract_level, credits`,
+    [playerId, INVEST_BASE_COST]
+  );
+  if (rows[0]) return { ok: true, level: rows[0].extract_level, credits: rows[0].credits };
+  const exists = await pool.query("SELECT 1 FROM players WHERE id = $1", [playerId]);
+  return { ok: false, reason: (exists.rowCount ?? 0) > 0 ? "insufficient_credits" : "unknown_player" };
+}
+
+// Extraction level for every player that owns a cell in the region (for mining).
+export async function loadOwnerLevels(
+  pool: pg.Pool,
+  region: string
+): Promise<{ owner_id: string; level: number }[]> {
+  const { rows } = await pool.query<{ owner_id: string; level: number }>(
+    `SELECT p.id AS owner_id, COALESCE(p.extract_level, 0) AS level
+       FROM players p
+      WHERE p.id IN (SELECT DISTINCT owner_id FROM cells WHERE region = $1 AND owner_id IS NOT NULL)`,
+    [region]
+  );
+  return rows;
+}
+
 // The most attractive unclaimed cell in a region (highest density) — what a
 // scout agent goes after.
 export async function findClaimableCell(

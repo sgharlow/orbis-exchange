@@ -1,6 +1,6 @@
-import { loadRegionCells, persistTick, persistYields, type Pool } from "@orbis/db";
+import { loadRegionCells, persistTick, persistYields, loadOwnerLevels, type Pool } from "@orbis/db";
 import { computeTick, cellKey, type CACell } from "./ca.js";
-import { computeMining } from "./mining.js";
+import { computeMining, multiplierForLevel } from "./mining.js";
 
 export interface RunTickResult {
   generation: number;
@@ -26,7 +26,9 @@ export async function runTick(
 ): Promise<RunTickResult> {
   const cells = await loadRegionCells(pool, region);
 
-  const mining = computeMining(cells);
+  const levels = await loadOwnerLevels(pool, region);
+  const multByOwner = new Map(levels.map((l) => [l.owner_id, multiplierForLevel(l.level)]));
+  const mining = computeMining(cells, multByOwner);
   const extraction = new Map(mining.extraction);
   if (options.extraction) for (const [k, v] of options.extraction) extraction.set(k, v);
 

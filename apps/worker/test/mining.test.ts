@@ -31,6 +31,14 @@ describe("computeMining", () => {
     expect(byKey["p2/ore"]).toBe(Math.floor(60 * EXTRACT_RATE)); // 6
   });
 
+  it("scales yield and pressure by the owner's extraction multiplier", () => {
+    const cells: MineCell[] = [{ x: 0, y: 0, density: 50, owner_id: "p1", resource_type: "ore" }];
+    const r = computeMining(cells, new Map([["p1", 2]]));
+    const amount = Math.floor(50 * EXTRACT_RATE * 2); // 10
+    expect(r.extraction.get("0,0")).toBe(amount);
+    expect(r.yields).toEqual([{ player_id: "p1", commodity: "ore", qty: amount }]);
+  });
+
   it("skips a depleted owned cell that would yield nothing", () => {
     const cells: MineCell[] = [{ x: 0, y: 0, density: 5, owner_id: "p1", resource_type: "ore" }];
     // floor(5 * 0.1) = 0

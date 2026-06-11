@@ -14,8 +14,12 @@ export {
   findClaimableCell,
   persistYields,
   CLAIM_COST,
+  investExtraction,
+  loadOwnerLevels,
+  INVEST_BASE_COST,
+  getPlayerState,
 } from "./queries.js";
-export type { RegionCell, CellUpdate, WorldCell, AgentRow } from "./queries.js";
+export type { RegionCell, CellUpdate, WorldCell, AgentRow, PlayerState } from "./queries.js";
 export {
   generateWorld,
   cellId,
