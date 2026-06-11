@@ -1,7 +1,12 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { createPool } from "../src/connection.js";
 import { applyMigrations } from "../src/migrate.js";
-import { loadRegionCells, persistTick } from "../src/queries.js";
+import {
+  loadRegionCells,
+  persistTick,
+  getWorld,
+  getLatestGeneration,
+} from "../src/queries.js";
 
 const pool = createPool();
 
@@ -61,5 +66,23 @@ describe("persistTick", () => {
     await persistTick(pool, 7, []);
     const tick = await pool.query("SELECT generation, cells_changed FROM ticks");
     expect(tick.rows).toEqual([{ generation: "7", cells_changed: 0 }]);
+  });
+});
+
+describe("world view reads", () => {
+  it("getWorld returns render fields ordered by y, x", async () => {
+    const world = await getWorld(pool, "rt");
+    expect(world).toEqual([
+      { x: 0, y: 0, resource_type: "ore", density: 50 },
+      { x: 1, y: 0, resource_type: "ore", density: 20 },
+      { x: 2, y: 0, resource_type: "ore", density: 80 },
+    ]);
+  });
+
+  it("getLatestGeneration is 0 before any tick and tracks the newest after", async () => {
+    expect(await getLatestGeneration(pool)).toBe(0);
+    await persistTick(pool, 3, []);
+    await persistTick(pool, 5, []);
+    expect(await getLatestGeneration(pool)).toBe(5);
   });
 });

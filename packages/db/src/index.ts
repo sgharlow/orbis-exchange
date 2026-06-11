@@ -1,7 +1,13 @@
 export { createPool } from "./connection.js";
 export { applyMigrations, appliedVersions } from "./migrate.js";
-export { getLeaderboard, loadRegionCells, persistTick } from "./queries.js";
-export type { RegionCell, CellUpdate } from "./queries.js";
+export {
+  getLeaderboard,
+  loadRegionCells,
+  persistTick,
+  getWorld,
+  getLatestGeneration,
+} from "./queries.js";
+export type { RegionCell, CellUpdate, WorldCell } from "./queries.js";
 export {
   generateWorld,
   cellId,

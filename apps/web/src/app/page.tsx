@@ -13,6 +13,9 @@ export default async function Home() {
   return (
     <main>
       <h1>Orbis Exchange — Leaderboard</h1>
+      <p>
+        <a href="/world">→ View the living world</a>
+      </p>
       <ol>
         {board.map((e) => (
           <li key={e.id}>

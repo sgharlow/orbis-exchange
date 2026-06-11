@@ -32,6 +32,31 @@ export async function loadRegionCells(pool: pg.Pool, region: string): Promise<Re
   return rows;
 }
 
+// One cell as the world view needs it: position, type (for hue), density (for
+// brightness). Read-only render path; keeps owner/id out of the snapshot.
+export interface WorldCell {
+  x: number;
+  y: number;
+  resource_type: string;
+  density: number;
+}
+
+export async function getWorld(pool: pg.Pool, region: string): Promise<WorldCell[]> {
+  const { rows } = await pool.query<WorldCell>(
+    `SELECT x, y, resource_type, density FROM cells WHERE region = $1 ORDER BY y, x`,
+    [region]
+  );
+  return rows;
+}
+
+// The most recent committed generation (0 if the world has never ticked).
+export async function getLatestGeneration(pool: pg.Pool): Promise<number> {
+  const { rows } = await pool.query<{ gen: string | null }>(
+    "SELECT max(generation)::text AS gen FROM ticks"
+  );
+  return rows[0]?.gen ? Number(rows[0].gen) : 0;
+}
+
 export interface CellUpdate {
   id: string | number;
   density: number;
