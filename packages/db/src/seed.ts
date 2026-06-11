@@ -4,6 +4,42 @@ import { generateWorld, type CellSeed } from "./world.js";
 
 const COMMODITIES = ["ore", "energy", "biomass", "rare"] as const;
 
+// Algorithmic agents that seed liquidity and act as the opponent (spec §4.5).
+// A market maker per commodity plus a momentum and a value bot on the demo
+// commodity. Each starts well-capitalised and holding inventory so makers can
+// quote both sides from the first tick.
+const AGENT_CREDITS = 1_000_000;
+const AGENT_INVENTORY = 5_000;
+const AGENTS = [
+  { id: "a0000000-0000-0000-0000-0000000000a1", handle: "mm-ore", strategy: "maker", params: { commodity: "ore", size: 5, margin: 2 } },
+  { id: "a0000000-0000-0000-0000-0000000000a2", handle: "mm-energy", strategy: "maker", params: { commodity: "energy", size: 5, margin: 2 } },
+  { id: "a0000000-0000-0000-0000-0000000000a3", handle: "mm-biomass", strategy: "maker", params: { commodity: "biomass", size: 5, margin: 2 } },
+  { id: "a0000000-0000-0000-0000-0000000000a4", handle: "mm-rare", strategy: "maker", params: { commodity: "rare", size: 5, margin: 2 } },
+  { id: "a0000000-0000-0000-0000-0000000000a5", handle: "momentum-ore", strategy: "momentum", params: { commodity: "ore", size: 3, lookback: 5 } },
+  { id: "a0000000-0000-0000-0000-0000000000a6", handle: "value-ore", strategy: "value", params: { commodity: "ore", size: 3, band: 0.04, lookback: 10 } },
+] as const;
+
+async function seedAgents(pool: pg.Pool): Promise<void> {
+  for (const a of AGENTS) {
+    await pool.query(
+      `INSERT INTO players (id, handle, kind, credits, home_region, created_at)
+         VALUES ($1, $2, 'agent', $3::bigint, 'us-east', now())
+         ON CONFLICT (id) DO NOTHING`,
+      [a.id, a.handle, AGENT_CREDITS]
+    );
+    await pool.query(
+      `INSERT INTO agents (player_id, strategy, params) VALUES ($1, $2, $3::jsonb)
+         ON CONFLICT (player_id) DO NOTHING`,
+      [a.id, a.strategy, JSON.stringify(a.params)]
+    );
+    await pool.query(
+      `INSERT INTO inventory (player_id, commodity, qty) VALUES ($1, $2, $3::bigint)
+         ON CONFLICT (player_id, commodity) DO NOTHING`,
+      [a.id, a.params.commodity, AGENT_INVENTORY]
+    );
+  }
+}
+
 // Insert cells in bounded batches: keeps each statement well under pg's parameter
 // cap and each transaction short (DSQL-friendly). Idempotent via ON CONFLICT.
 async function insertCells(pool: pg.Pool, cells: CellSeed[], batchSize = 500): Promise<void> {
@@ -47,7 +83,9 @@ async function seed(): Promise<void> {
     const world = generateWorld();
     await insertCells(pool, world);
 
-    console.log(`seed complete (${world.length} cells)`);
+    await seedAgents(pool);
+
+    console.log(`seed complete (${world.length} cells, ${AGENTS.length} agents)`);
   } finally {
     await pool.end();
   }

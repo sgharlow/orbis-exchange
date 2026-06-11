@@ -8,8 +8,9 @@ export {
   getLatestGeneration,
   ensurePlayer,
   STARTING_CREDITS,
+  loadAgents,
 } from "./queries.js";
-export type { RegionCell, CellUpdate, WorldCell } from "./queries.js";
+export type { RegionCell, CellUpdate, WorldCell, AgentRow } from "./queries.js";
 export {
   generateWorld,
   cellId,

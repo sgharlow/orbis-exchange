@@ -35,6 +35,23 @@ export async function loadRegionCells(pool: pg.Pool, region: string): Promise<Re
   return rows;
 }
 
+// An agent and its owning player's spendable balance, for the agent runner.
+export interface AgentRow {
+  player_id: string;
+  strategy: string;
+  params: { commodity: string; size: number; margin?: number; band?: number; lookback?: number };
+  credits: string;
+}
+
+export async function loadAgents(pool: pg.Pool): Promise<AgentRow[]> {
+  const { rows } = await pool.query<AgentRow>(
+    `SELECT a.player_id, a.strategy, a.params, p.credits
+       FROM agents a JOIN players p ON p.id = a.player_id
+      ORDER BY a.player_id`
+  );
+  return rows;
+}
+
 // Credits a fresh human player starts with so a new session can trade.
 export const STARTING_CREDITS = 10_000;
 
