@@ -65,9 +65,21 @@ export function MarketPanel({
     };
     load();
     const id = setInterval(load, POLL_MS);
+
+    // Realtime market updates (spec §5.3); the poll above is the fallback.
+    const es = new EventSource(`/api/stream?commodity=${encodeURIComponent(commodity)}`);
+    es.addEventListener("market", (ev) => {
+      try {
+        if (!cancelled) setMarket(JSON.parse((ev as MessageEvent).data) as MarketSnapshot);
+      } catch {
+        /* ignore a malformed frame */
+      }
+    });
+
     return () => {
       cancelled = true;
       clearInterval(id);
+      es.close();
     };
   }, [commodity]);
 

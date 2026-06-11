@@ -86,6 +86,20 @@ export async function getWorld(pool: pg.Pool, region: string): Promise<WorldCell
   return rows;
 }
 
+// Cells changed strictly after `sinceGen` — the delta the realtime stream pushes
+// (resource_type never changes, so x/y/density is enough to patch the client).
+export async function getWorldSince(
+  pool: pg.Pool,
+  region: string,
+  sinceGen: number
+): Promise<{ x: number; y: number; density: number }[]> {
+  const { rows } = await pool.query<{ x: number; y: number; density: number }>(
+    `SELECT x, y, density FROM cells WHERE region = $1 AND updated_gen > $2 ORDER BY y, x`,
+    [region, sinceGen]
+  );
+  return rows;
+}
+
 // The most recent committed generation (0 if the world has never ticked).
 export async function getLatestGeneration(pool: pg.Pool): Promise<number> {
   const { rows } = await pool.query<{ gen: string | null }>(

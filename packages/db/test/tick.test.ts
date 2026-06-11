@@ -5,6 +5,7 @@ import {
   loadRegionCells,
   persistTick,
   getWorld,
+  getWorldSince,
   getLatestGeneration,
 } from "../src/queries.js";
 
@@ -84,5 +85,13 @@ describe("world view reads", () => {
     await persistTick(pool, 3, []);
     await persistTick(pool, 5, []);
     expect(await getLatestGeneration(pool)).toBe(5);
+  });
+
+  it("getWorldSince returns only cells changed after a generation (the SSE delta)", async () => {
+    // tick id 1 -> gen 1 (updated_gen 1); the others stay at updated_gen 0
+    await persistTick(pool, 1, [{ id: 1, density: 44 }]);
+    const delta = await getWorldSince(pool, "rt", 0);
+    expect(delta).toEqual([{ x: 0, y: 0, density: 44 }]);
+    expect(await getWorldSince(pool, "rt", 1)).toEqual([]); // nothing after gen 1
   });
 });

@@ -119,9 +119,30 @@ export function WorldView({
     };
 
     const id = setInterval(poll, POLL_MS);
+
+    // Realtime: apply cell deltas the instant a tick lands (spec §5.3). The poll
+    // above stays as a fallback for clients where SSE drops.
+    const es = new EventSource(`/api/stream?region=${encodeURIComponent(region)}`);
+    es.addEventListener("world", (ev) => {
+      try {
+        const d = JSON.parse((ev as MessageEvent).data) as {
+          generation: number;
+          cells: { x: number; y: number; density: number }[];
+        };
+        const target = targetRef.current;
+        for (const c of d.cells) target[c.y * size + c.x] = c.density;
+        setGeneration(d.generation);
+        setLive(true);
+        kick();
+      } catch {
+        /* ignore a malformed frame */
+      }
+    });
+
     return () => {
       cancelled = true;
       clearInterval(id);
+      es.close();
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
   }, [region, size, n]);

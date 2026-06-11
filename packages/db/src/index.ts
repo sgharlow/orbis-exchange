@@ -5,6 +5,7 @@ export {
   loadRegionCells,
   persistTick,
   getWorld,
+  getWorldSince,
   getLatestGeneration,
   ensurePlayer,
   STARTING_CREDITS,
