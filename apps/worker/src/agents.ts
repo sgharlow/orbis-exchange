@@ -87,6 +87,50 @@ export function decide(strategy: Strategy, params: AgentParams, ctx: AgentContex
     return out;
   }
 
-  // scout (mining) and arb are Phase 3 stretch — no trading intent yet.
+  // scout is handled in the runner (it claims, not trades); arb spans markets so
+  // it has its own entry point, pickArb, below.
+  return out;
+}
+
+export interface ArbMarket {
+  commodity: string;
+  lastPrice: number | null;
+  bestBid: number | null;
+  bestAsk: number | null;
+  recentPrices: number[];
+}
+
+export interface ArbContext {
+  size: number;
+  credits: number;
+  holdings: Record<string, number>;
+  lookback?: number;
+}
+
+// Arbitrage across commodities (spec §4.5): buy the commodity trading furthest
+// below its rolling mean and sell the one furthest above it that the agent holds.
+export function pickArb(markets: ReadonlyArray<ArbMarket>, ctx: ArbContext): OrderIntent[] {
+  const lb = ctx.lookback ?? 10;
+  let buy: { commodity: string; price: number; dev: number } | null = null;
+  let sell: { commodity: string; price: number; dev: number } | null = null;
+
+  for (const m of markets) {
+    const recent = m.recentPrices.slice(-lb);
+    if (recent.length === 0 || m.lastPrice === null) continue;
+    const mean = recent.reduce((a, b) => a + b, 0) / recent.length;
+    if (mean <= 0) continue;
+    const dev = (m.lastPrice - mean) / mean;
+
+    if (dev < 0 && m.bestAsk !== null && ctx.credits >= m.bestAsk * ctx.size) {
+      if (!buy || dev < buy.dev) buy = { commodity: m.commodity, price: m.bestAsk, dev };
+    }
+    if (dev > 0 && m.bestBid !== null && (ctx.holdings[m.commodity] ?? 0) >= ctx.size) {
+      if (!sell || dev > sell.dev) sell = { commodity: m.commodity, price: m.bestBid, dev };
+    }
+  }
+
+  const out: OrderIntent[] = [];
+  if (buy) out.push({ commodity: buy.commodity, side: "buy", price: buy.price, qty: ctx.size });
+  if (sell) out.push({ commodity: sell.commodity, side: "sell", price: sell.price, qty: ctx.size });
   return out;
 }

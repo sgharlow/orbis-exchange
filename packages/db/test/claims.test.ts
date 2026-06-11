@@ -1,7 +1,14 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { createPool } from "../src/connection.js";
 import { applyMigrations } from "../src/migrate.js";
-import { claimCell, findClaimableCell, persistYields, CLAIM_COST } from "../src/queries.js";
+import {
+  claimCell,
+  findClaimableCell,
+  persistYields,
+  CLAIM_COST,
+  listCell,
+  buyListedCell,
+} from "../src/queries.js";
 
 const pool = createPool();
 const P = "11111111-1111-1111-1111-111111111111";
@@ -66,6 +73,47 @@ describe("findClaimableCell", () => {
 
   it("returns null when nothing is claimable", async () => {
     expect(await findClaimableCell(pool, "empty")).toBeNull();
+  });
+});
+
+describe("cell secondary market", () => {
+  const BUYER = "33333333-3333-3333-3333-333333333333";
+
+  it("lists / unlists only the owner's cell", async () => {
+    await claimCell(pool, P, 1); // P now owns cell 1
+    expect(await listCell(pool, P, 1, 300)).toEqual({ listed: true });
+    expect((await pool.query("SELECT list_price FROM cells WHERE id=1")).rows[0].list_price).toBe("300");
+    expect(await listCell(pool, P, 1, null)).toEqual({ listed: false }); // unlist
+    expect((await pool.query("SELECT list_price FROM cells WHERE id=1")).rows[0].list_price).toBeNull();
+    expect(await listCell(pool, BUYER, 1, 300)).toEqual({ listed: false, reason: "not_owner" });
+  });
+
+  it("buys a listed cell: transfers ownership and pays the seller", async () => {
+    await pool.query(
+      "INSERT INTO players (id, handle, kind, credits, home_region, created_at) VALUES ($1,'buyer','human',1000,'us-east',now())",
+      [BUYER]
+    );
+    // P owns + lists cell 1 at 300 (P had 600, claim cost 500 -> 100)
+    await claimCell(pool, P, 1);
+    await listCell(pool, P, 1, 300);
+
+    expect(await buyListedCell(pool, BUYER, 1)).toEqual({ bought: true, price: "300" });
+    expect(await owner(1)).toBe(BUYER);
+    expect(await credits(BUYER)).toBe("700"); // 1000 - 300
+    expect(await credits(P)).toBe("400"); // 100 + 300
+    expect((await pool.query("SELECT list_price FROM cells WHERE id=1")).rows[0].list_price).toBeNull();
+  });
+
+  it("rejects buying an unlisted cell, your own cell, and when broke", async () => {
+    await pool.query(
+      "INSERT INTO players (id, handle, kind, credits, home_region, created_at) VALUES ($1,'buyer','human',100,'us-east',now())",
+      [BUYER]
+    );
+    expect(await buyListedCell(pool, BUYER, 1)).toEqual({ bought: false, reason: "not_listed" });
+    await claimCell(pool, P, 1);
+    await listCell(pool, P, 1, 300);
+    expect(await buyListedCell(pool, P, 1)).toEqual({ bought: false, reason: "own_cell" });
+    expect(await buyListedCell(pool, BUYER, 1)).toEqual({ bought: false, reason: "insufficient_credits" });
   });
 });
 

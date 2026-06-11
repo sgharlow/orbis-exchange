@@ -8,6 +8,7 @@ const MAKER = "a0000000-0000-0000-0000-000000000001";
 const VALUE = "a0000000-0000-0000-0000-000000000002";
 const SELLER = "b0000000-0000-0000-0000-000000000003";
 const SCOUT = "a0000000-0000-0000-0000-000000000004";
+const ARB = "a0000000-0000-0000-0000-000000000005";
 
 async function addAgent(id: string, handle: string, strategy: string, params: object, credits = 100000) {
   await pool.query(
@@ -101,5 +102,38 @@ describe("runAgents", () => {
 
     const owned = await pool.query("SELECT id FROM cells WHERE owner_id = $1", [SCOUT]);
     expect(owned.rows).toEqual([{ id: "11" }]); // density 88 is the best
+  });
+
+  it("an arb agent buys the commodity trading below its mean", async () => {
+    // a seller resting an ore ask @95, backed by inventory
+    await pool.query(
+      `INSERT INTO players (id, handle, kind, credits, home_region, created_at)
+         VALUES ($1,'seller','human',0,'us-east', now())`,
+      [SELLER]
+    );
+    await pool.query("INSERT INTO inventory (player_id, commodity, qty) VALUES ($1,'ore',100)", [SELLER]);
+    await pool.query(
+      `INSERT INTO orders (id, player_id, commodity, side, price, qty_open, status, created_at)
+         VALUES (gen_random_uuid(), $1, 'ore', 'sell', 95, 10, 'open', now())`,
+      [SELLER]
+    );
+    // ore last 80 with mean ~100 => undervalued; other commodities have no data
+    await pool.query(
+      "INSERT INTO market_state (commodity, last_price, best_bid, best_ask, generation) VALUES ('ore',80,NULL,NULL,0)"
+    );
+    for (const p of [100, 100, 100]) {
+      await pool.query(
+        `INSERT INTO trades (id, commodity, buy_order_id, sell_order_id, price, qty, generation, executed_at)
+           VALUES (gen_random_uuid(),'ore',gen_random_uuid(),gen_random_uuid(),$1,1,0,now())`,
+        [p]
+      );
+    }
+    await addAgent(ARB, "arb", "arb", { commodity: "ore", size: 3, lookback: 10 });
+
+    const res = await runAgents(pool);
+    expect(res.fills).toBe(3); // arb buys 3 ore at the resting ask
+
+    const inv = await pool.query("SELECT qty FROM inventory WHERE player_id=$1 AND commodity='ore'", [ARB]);
+    expect(inv.rows[0].qty).toBe("3");
   });
 });

@@ -22,8 +22,8 @@ are done. **What's not done is cloud + the §4.4 investment layer + some §10 UX
 | §4.1 | World model (64×64, types, density, owner, gen) | ✅ | single region `r0` |
 | §4.2 | Cellular-automaton rules | ✅ | exact constants; spec-open points recorded in §4.2 |
 | §4.3 | Single global market (price-time, resting price) | ✅ | |
-| §4.4 | Investment: cell resale/lease · extraction upgrade · holdings | 🔴 | resale/lease + invest **missing**; holdings exist |
-| §4.5 | Agents: maker·momentum·value·scout·arb | 🟡 | 4 of 5 done; **arb stubbed** |
+| §4.4 | Investment: cell resale/lease · extraction upgrade · holdings | ✅ | invest (`/api/invest`) + cell resale (`/api/claims/:id/list` + buy) + holdings all done; refine still = identity |
+| §4.5 | Agents: maker·momentum·value·scout·arb | ✅ | all 5 (arb is cross-commodity mean-reversion) |
 | §4.6 | Civic layer (stretch) | ⚪ | stretch — not built |
 | §5.1 | 3 runtimes share one DB | 🟡 | architecture in place; **workers run as a local loop, not deployed** |
 | §5.2 | The tick (in-memory, delta persist) | ✅ | |
@@ -32,8 +32,8 @@ are done. **What's not done is cloud + the §4.4 investment layer + some §10 UX
 | §6 / §6.1 | Data model + settlement transaction | ✅ | all 8 tables; conditional-write OCC |
 | §7 | DSQL rationale (DynamoDB documented, unused) | ✅ | |
 | §8 | Stack + deployment | 🟡 | stack ✅ local; **Vercel + DSQL deploy missing** |
-| §9 | API surface | 🟡 | have world/market/orders/orders:id/claims/leaderboard/stream; **missing `POST /api/claims/:id/list` and `POST /api/invest`**; `world?since=` not wired (SSE covers deltas) |
-| §10 | Frontend/UX | 🟡 | world view ✅ (outlines ✅), market panel ✅ (order book, buy/sell, sparkline), leaderboard ✅; **player dashboard missing**; **leaderboard not on the world screen**; price "chart" is a sparkline |
+| §9 | API surface | ✅ | world/market/orders/orders:id/claims/claims:id/list/invest/me/leaderboard/stream; `world?since=` still unwired (SSE covers deltas) |
+| §10 | Frontend/UX | ✅ | world view + outlines, market panel, **player dashboard** + invest control, **leaderboard on /world**; price "chart" is still a sparkline (P2) |
 | §11 | Cost guardrails | 🟡 | in-memory+delta ✅, bounded grid+3s ✅; **AWS Budgets alert + Vercel spend cap not set** (cloud) |
 | §12 | Scaling design | 🟡 | per-commodity book ✅; **edge-cached reads not enabled** (routes are force-dynamic); region sharding is single-region in practice |
 | §13 | Phases 0–4 | 🟡 | 1–3 done locally; **Phase 0 cloud bits + Phase 4 ship outstanding** |
@@ -61,20 +61,23 @@ Legend: ✅ done · 🟡 partial · 🔴 missing · ⚪ stretch.
 6. **Submission (§14):** record the video (script ready), capture DSQL storage
    screenshots, publish video, paste Vercel link + Team ID, submit on Devpost.
 
-### P1 — Game completeness vs spec (buildable now, no cloud)
+### P1 — Game completeness vs spec — ✅ DONE (2026-06-10)
 
-7. **Investment / extraction upgrade (§4.4, §9 `POST /api/invest`).** Add a
-   per-player extraction multiplier (new column/table) that boosts mined yield at
-   the cost of faster depletion; wire the endpoint + a UI control.
-8. **Player dashboard (§10).** Surface the signed-in player's **credits,
-   inventory, and owned cells** (add a `GET /api/me` or extend an existing read).
-   Today a player can't see their own balance/holdings in the UI.
-9. **Leaderboard on the world screen (§10:** "always on screen"). Embed a compact
-   leaderboard panel on `/world` (it lives only on `/` today), agents tagged.
-10. **Cell secondary market (§4.4, §9 `POST /api/claims/:id/list`).** List an owned
-    cell for sale/lease; let others buy it through the ledger.
-11. **`arb` agent (§4.5).** Exploit transient gaps between commodities; currently
-    returns no intent.
+7. ✅ **Investment / extraction upgrade** — `players.extract_level` (migration
+   0003), `investExtraction` (escalating in-SQL cost), per-owner mining multiplier
+   (yield + depletion), `POST /api/invest` + dashboard control.
+8. ✅ **Player dashboard** — `GET /api/me` + `PlayerDashboard` (credits, level,
+   holdings, owned cells) on `/world`.
+9. ✅ **Leaderboard on the world screen** — `LeaderboardPanel` on `/world`
+   (AI tagged), server-fed + polled.
+10. ✅ **Cell secondary market** — `list_price` (migration 0004), `listCell` +
+    `buyListedCell`, `POST /api/claims/:id/list`, and clicking a listed cell buys
+    it via `/api/claims`. *(Residual: a UI control to *initiate* a listing —
+    set a price on your own cell — is deferred to P2; the engine + API are done +
+    tested, and buying a listed cell already works by click.)*
+11. ✅ **`arb` agent** — cross-commodity mean-reversion (`pickArb`): buys the
+    commodity furthest below its rolling mean, sells the one furthest above it
+    that it holds; seeded as `arb-bot`.
 
 ### P2 — Hardening / polish
 

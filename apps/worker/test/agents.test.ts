@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { decide, type AgentContext } from "../src/agents.js";
+import { decide, pickArb, type AgentContext, type ArbMarket } from "../src/agents.js";
 
 const rich: AgentContext = {
   lastPrice: 100,
@@ -62,6 +62,26 @@ describe("value", () => {
   it("holds when price is within the band", () => {
     const ctx = { ...rich, recentPrices: [100, 100, 100], lastPrice: 103 };
     expect(decide("value", { commodity: "ore", size: 2, band: 0.1 }, ctx)).toEqual([]);
+  });
+});
+
+describe("pickArb", () => {
+  const mkts: ArbMarket[] = [
+    { commodity: "ore", lastPrice: 80, bestBid: 79, bestAsk: 81, recentPrices: [100, 100, 100] }, // undervalued
+    { commodity: "energy", lastPrice: 130, bestBid: 129, bestAsk: 131, recentPrices: [100, 100, 100] }, // overvalued
+    { commodity: "biomass", lastPrice: 100, bestBid: 99, bestAsk: 101, recentPrices: [100, 100, 100] }, // fair
+  ];
+
+  it("buys the most-undervalued commodity and sells the most-overvalued it holds", () => {
+    const out = pickArb(mkts, { size: 2, credits: 1_000_000, holdings: { energy: 50 } });
+    expect(out).toContainEqual({ commodity: "ore", side: "buy", price: 81, qty: 2 });
+    expect(out).toContainEqual({ commodity: "energy", side: "sell", price: 129, qty: 2 });
+  });
+
+  it("won't sell a commodity it doesn't hold", () => {
+    const out = pickArb(mkts, { size: 2, credits: 1_000_000, holdings: {} });
+    expect(out.some((o) => o.side === "sell")).toBe(false);
+    expect(out.some((o) => o.side === "buy" && o.commodity === "ore")).toBe(true);
   });
 });
 

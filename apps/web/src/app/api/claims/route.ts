@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { createPool, claimCell, ensurePlayer } from "@orbis/db";
+import { createPool, claimCell, buyListedCell, ensurePlayer } from "@orbis/db";
 import { verifySession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
-// POST /api/claims { cell_id } — claim an unclaimed cell as the signed-in
-// player (spec §4.4, §9). The cell then yields its resource to you each tick.
+// POST /api/claims { cell_id } — acquire a cell as the signed-in player (spec
+// §4.4, §9): claim it if unclaimed, or buy it if another player has listed it for
+// sale. The cell then yields its resource to you each tick.
 export async function POST(request: Request) {
   const secret = process.env.SESSION_SECRET;
   if (!secret) return NextResponse.json({ error: "server_misconfigured" }, { status: 500 });
@@ -24,7 +25,14 @@ export async function POST(request: Request) {
   try {
     await ensurePlayer(pool, { id: claims.playerId, handle: claims.handle });
     const result = await claimCell(pool, claims.playerId, body.cell_id);
-    return NextResponse.json(result, { status: result.claimed ? 200 : 409 });
+    if (result.claimed) return NextResponse.json(result);
+    // already owned — if it's listed for sale, buy it instead
+    if (result.reason === "taken") {
+      const buy = await buyListedCell(pool, claims.playerId, body.cell_id);
+      if (buy.bought) return NextResponse.json({ claimed: true, bought: true, price: buy.price });
+      return NextResponse.json({ claimed: false, reason: buy.reason === "not_listed" ? "taken" : buy.reason }, { status: 409 });
+    }
+    return NextResponse.json(result, { status: 409 });
   } finally {
     await pool.end();
   }

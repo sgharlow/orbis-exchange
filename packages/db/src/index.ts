@@ -14,6 +14,8 @@ export {
   findClaimableCell,
   persistYields,
   CLAIM_COST,
+  listCell,
+  buyListedCell,
   investExtraction,
   loadOwnerLevels,
   INVEST_BASE_COST,

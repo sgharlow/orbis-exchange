@@ -163,6 +163,74 @@ export async function findClaimableCell(
   return rows[0] ?? null;
 }
 
+// List (or, with price=null, unlist) an owned cell for sale (spec §4.4).
+export async function listCell(
+  pool: pg.Pool,
+  playerId: string,
+  cellId: string | number,
+  price: number | null
+): Promise<{ listed: boolean; reason?: "not_owner" }> {
+  const { rowCount } = await pool.query(
+    "UPDATE cells SET list_price = $1 WHERE id = $2 AND owner_id = $3",
+    [price, cellId, playerId]
+  );
+  if ((rowCount ?? 0) === 0) return { listed: false, reason: "not_owner" };
+  return { listed: price !== null };
+}
+
+// Buy a listed cell from its owner: pay the list price and transfer ownership in
+// one transaction (conditional writes; DSQL-safe). The new owner then mines it.
+export async function buyListedCell(
+  pool: pg.Pool,
+  buyerId: string,
+  cellId: string | number
+): Promise<{ bought: boolean; reason?: "not_listed" | "own_cell" | "insufficient_credits" | "conflict"; price?: string }> {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const cell = (
+      await client.query<{ owner_id: string | null; list_price: string | null }>(
+        "SELECT owner_id, list_price FROM cells WHERE id = $1",
+        [cellId]
+      )
+    ).rows[0];
+    if (!cell || cell.list_price === null) {
+      await client.query("ROLLBACK");
+      return { bought: false, reason: "not_listed" };
+    }
+    if (cell.owner_id === buyerId) {
+      await client.query("ROLLBACK");
+      return { bought: false, reason: "own_cell" };
+    }
+    const price = cell.list_price;
+    const seller = cell.owner_id!;
+    const debit = await client.query(
+      "UPDATE players SET credits = credits - $1::bigint WHERE id = $2 AND credits >= $1::bigint",
+      [price, buyerId]
+    );
+    if ((debit.rowCount ?? 0) === 0) {
+      await client.query("ROLLBACK");
+      return { bought: false, reason: "insufficient_credits" };
+    }
+    const xfer = await client.query(
+      "UPDATE cells SET owner_id = $1, list_price = NULL WHERE id = $2 AND list_price = $3::bigint AND owner_id = $4",
+      [buyerId, cellId, price, seller]
+    );
+    if ((xfer.rowCount ?? 0) === 0) {
+      await client.query("ROLLBACK");
+      return { bought: false, reason: "conflict" };
+    }
+    await client.query("UPDATE players SET credits = credits + $1::bigint WHERE id = $2", [price, seller]);
+    await client.query("COMMIT");
+    return { bought: true, price };
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 // Credit mined resource to owners' inventories (one short transaction).
 export async function persistYields(
   pool: pg.Pool,
