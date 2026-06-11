@@ -6,6 +6,8 @@ export {
   persistTick,
   getWorld,
   getLatestGeneration,
+  ensurePlayer,
+  STARTING_CREDITS,
 } from "./queries.js";
 export type { RegionCell, CellUpdate, WorldCell } from "./queries.js";
 export {

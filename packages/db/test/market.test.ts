@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { createPool } from "../src/connection.js";
 import { applyMigrations } from "../src/migrate.js";
 import { placeOrder, cancelOrder, getMarket, OrderError } from "../src/market.js";
-import { getLeaderboard } from "../src/queries.js";
+import { getLeaderboard, ensurePlayer, STARTING_CREDITS } from "../src/queries.js";
 
 const pool = createPool();
 
@@ -144,6 +144,19 @@ describe("getMarket", () => {
     expect(m.asks).toEqual([{ price: "100", qty_open: "6" }]); // remainder of the sell
     expect(m.recent_trades).toHaveLength(1);
     expect(m.recent_trades[0]).toMatchObject({ price: "100", qty: "4" });
+  });
+});
+
+describe("ensurePlayer", () => {
+  it("creates a new player with starting credits and is idempotent", async () => {
+    const id = "44444444-4444-4444-4444-444444444444";
+    await ensurePlayer(pool, { id, handle: "dana" });
+    expect(await credits(id)).toBe(String(STARTING_CREDITS));
+
+    // a second call must not reset an existing player's balance
+    await pool.query("UPDATE players SET credits = 7 WHERE id = $1", [id]);
+    await ensurePlayer(pool, { id, handle: "dana" });
+    expect(await credits(id)).toBe("7");
   });
 });
 

@@ -35,6 +35,23 @@ export async function loadRegionCells(pool: pg.Pool, region: string): Promise<Re
   return rows;
 }
 
+// Credits a fresh human player starts with so a new session can trade.
+export const STARTING_CREDITS = 10_000;
+
+// Idempotently create a player row for a session identity. New players join with
+// STARTING_CREDITS and no inventory; existing players are left untouched.
+export async function ensurePlayer(
+  pool: pg.Pool,
+  player: { id: string; handle: string; home_region?: string }
+): Promise<void> {
+  await pool.query(
+    `INSERT INTO players (id, handle, kind, credits, home_region, created_at)
+       VALUES ($1, $2, 'human', $3::bigint, $4, now())
+       ON CONFLICT (id) DO NOTHING`,
+    [player.id, player.handle, STARTING_CREDITS, player.home_region ?? "us-east"]
+  );
+}
+
 // One cell as the world view needs it: position, type (for hue), density (for
 // brightness). Read-only render path; keeps owner/id out of the snapshot.
 export interface WorldCell {
