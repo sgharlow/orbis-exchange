@@ -20,6 +20,7 @@ opponent on one net-worth leaderboard.
 - 🏗 **[Architecture](docs/architecture.md)** — diagram + the DSQL story.
 - 🚀 **[Devpost submission](docs/devpost-submission.md)** — write-up + checklist.
 - 🎬 **[Demo video script & shot-list](docs/demo-video-script.md)** — recording-ready.
+- 🗺 **[Roadmap & spec QA](docs/roadmap.md)** — spec-vs-state gaps, prioritized.
 
 ## How it works
 
