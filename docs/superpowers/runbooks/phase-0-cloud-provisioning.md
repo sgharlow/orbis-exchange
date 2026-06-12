@@ -23,7 +23,7 @@ Manual, user-approved steps to take Orbis Exchange Phase 0 from "green locally" 
 
 ## D. Apply migrations to the live cluster
 - [ ] `DB_MODE=dsql DSQL_HOST=<host> DSQL_REGION=<region> pnpm db:migrate`
-- [ ] Expected: `applied 0001_init`, `applied 0002_indexes`, `migrations complete`.
+- [ ] Expected: `applied 0001_init`, `applied 0002_indexes`, `applied 0003_invest`, `applied 0004_cell_listing`, `migrations complete`.
 - [ ] The runner is DSQL-aware: it runs each DDL statement in its own auto-commit transaction (DSQL allows only 1 DDL per transaction and forbids DDL+DML mixing) and rewrites `CREATE INDEX` → `CREATE INDEX ASYNC`.
 - [ ] **If a migration partially applies and then errors** (DSQL has no transactional DDL, so there is no rollback): reset and retry on the fresh cluster —
       connect with a psql client and run `DROP SCHEMA public CASCADE; CREATE SCHEMA public;`, then re-run `pnpm db:migrate`.
@@ -35,7 +35,7 @@ Manual, user-approved steps to take Orbis Exchange Phase 0 from "green locally" 
 
 ## F. Smoke-test the live cluster (the pre-deploy gate)
 - [ ] `DB_MODE=dsql DSQL_HOST=<host> DSQL_REGION=<region> pnpm db:smoke`
-- [ ] Expected: `smoke OK — migrations=[0001_init,0002_indexes] players=2`
+- [ ] Expected: `smoke OK — migrations=[0001_init,0002_indexes,0003_invest,0004_cell_listing] players=10` (fresh cluster: 2 named players `alice`+`bot-maker` + 8 algorithmic agents from seed; local dev may show a higher count if extra players were added during development)
 
 ## G. Deploy apps/web to Vercel
 - [ ] **Check for an existing Vercel project first** (`vercel ls` or `.vercel/project.json`) — do NOT create a duplicate.
@@ -45,7 +45,7 @@ Manual, user-approved steps to take Orbis Exchange Phase 0 from "green locally" 
 - [ ] Note: the app consumes the workspace `@orbis/db` (NodeNext `.js` imports) via a webpack `extensionAlias` in `next.config.ts`. The build uses webpack (no `--turbopack`); if Turbopack is ever enabled, add the Turbopack-equivalent resolver config.
 
 ## H. Verify the live spine
-- [ ] `curl https://<deployment>/api/health` → `{"ok":true,"migrations":["0001_init","0002_indexes"]}`
+- [ ] `curl https://<deployment>/api/health` → `{"ok":true,"migrations":["0001_init","0002_indexes","0003_invest","0004_cell_listing"]}`
 - [ ] Visit `https://<deployment>/` → leaderboard shows the 2 seeded players (`bot-maker` tagged `(AI)`).
 - [ ] This proves the full path: browser → Vercel route handler → DSQL over IAM auth → browser. **Phase 0's headline deliverable.**
 
