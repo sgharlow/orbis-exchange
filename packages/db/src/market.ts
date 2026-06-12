@@ -342,7 +342,7 @@ export async function getMarket(pool: pg.Pool, commodity: string): Promise<Marke
     ),
     pool.query<MarketTrade>(
       `SELECT price, qty, executed_at FROM trades
-         WHERE commodity = $1 ORDER BY executed_at DESC LIMIT 20`,
+         WHERE commodity = $1 ORDER BY executed_at DESC LIMIT 60`,
       [commodity]
     ),
   ]);

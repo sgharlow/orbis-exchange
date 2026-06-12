@@ -3,7 +3,7 @@ import {
   formatCredits,
   cumulativeDepth,
   spread,
-  sparklinePath,
+  chartGeometry,
   COMMODITIES,
 } from "../src/lib/market-view.js";
 
@@ -40,16 +40,30 @@ describe("spread", () => {
   });
 });
 
-describe("sparklinePath", () => {
-  it("returns empty for no prices and a flat line for one", () => {
-    expect(sparklinePath([], 100, 30)).toBe("");
-    expect(sparklinePath([50], 100, 30)).toMatch(/^M 2 15 L 98 15$/);
+describe("chartGeometry", () => {
+  it("returns null with no trades", () => {
+    expect(chartGeometry([], 220, 84)).toBeNull();
   });
 
-  it("plots a moveto then one lineto per subsequent price", () => {
-    const path = sparklinePath([10, 20, 30], 100, 30);
-    expect((path.match(/M/g) || []).length).toBe(1);
-    expect((path.match(/L/g) || []).length).toBe(2);
+  it("maps min to the bottom and max to the top of the padded box", () => {
+    const g = chartGeometry([10, 20], 220, 80, 4)!;
+    expect(g.min).toBe(10);
+    expect(g.max).toBe(20);
+    expect(g.line).toBe("M 4.0 76.0 L 216.0 4.0");
+    expect(g.lastX).toBeCloseTo(216);
+    expect(g.lastY).toBeCloseTo(4);
+  });
+
+  it("closes the area path down to the baseline", () => {
+    const g = chartGeometry([10, 20], 220, 80, 4)!;
+    expect(g.area).toBe("M 4.0 76.0 L 216.0 4.0 L 216.0 76.0 L 4.0 76.0 Z");
+  });
+
+  it("centers a single trade as a flat reference", () => {
+    const g = chartGeometry([15], 220, 80, 4)!;
+    expect(g.min).toBe(15);
+    expect(g.max).toBe(15);
+    expect(g.lastX).toBeCloseTo(110); // pad + innerW/2
   });
 });
 

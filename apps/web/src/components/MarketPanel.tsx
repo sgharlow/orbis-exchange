@@ -8,7 +8,7 @@ import {
   formatCredits,
   cumulativeDepth,
   spread,
-  sparklinePath,
+  chartGeometry,
 } from "@/lib/market-view";
 import { legendColor } from "@/lib/world-view";
 
@@ -157,7 +157,7 @@ export function MarketPanel({
   const bids = cumulativeDepth(market.bids);
   const sp = spread(market.bids[0]?.price, market.asks[0]?.price);
   const tradePrices = [...market.recent_trades].reverse().map((t) => Number(t.price));
-  const spark = sparklinePath(tradePrices, 220, 38);
+  const chart = chartGeometry(tradePrices, 220, 84);
 
   return (
     <section className="market" aria-label="Market panel">
@@ -180,15 +180,29 @@ export function MarketPanel({
           <span className="price-last">{formatCredits(market.last_price)}</span>
           <span className="price-unit">cr · last</span>
         </div>
-        <svg className="spark" viewBox="0 0 220 38" width="220" height="38" aria-hidden="true">
-          {spark && <path d={spark} fill="none" stroke="url(#sparkGrad)" strokeWidth="1.5" />}
-          <defs>
-            <linearGradient id="sparkGrad" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0" stopColor="#38e0f5" stopOpacity="0.2" />
-              <stop offset="1" stopColor="#38e0f5" stopOpacity="1" />
-            </linearGradient>
-          </defs>
-        </svg>
+        <div className="chart-wrap">
+          <svg className="chart" viewBox="0 0 220 84" width="220" height="84" aria-hidden="true">
+            <defs>
+              <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="#38e0f5" stopOpacity="0.28" />
+                <stop offset="1" stopColor="#38e0f5" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            {chart && (
+              <>
+                <path d={chart.area} fill="url(#chartFill)" />
+                <path d={chart.line} fill="none" stroke="#38e0f5" strokeWidth="1.5" />
+                <circle cx={chart.lastX} cy={chart.lastY} r="2.5" fill="#38e0f5" />
+              </>
+            )}
+          </svg>
+          {chart && (
+            <div className="chart-scale" aria-hidden="true">
+              <span>{formatCredits(chart.max)}</span>
+              <span>{formatCredits(chart.min)}</span>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="book">

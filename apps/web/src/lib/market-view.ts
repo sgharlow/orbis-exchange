@@ -1,5 +1,5 @@
 // Pure helpers for the market panel: number formatting, cumulative order-book
-// depth (for the depth bars), bid/ask spread, and the price sparkline path.
+// depth (for the depth bars), bid/ask spread, and the price chart geometry.
 // Unit-tested; the React panel is a thin shell over these.
 
 export const COMMODITIES = ["ore", "energy", "biomass", "rare"] as const;
@@ -41,24 +41,39 @@ export function spread(bestBid?: string, bestAsk?: string): number | null {
   return Number(bestAsk) - Number(bestBid);
 }
 
-// SVG path string for a price sparkline (prices in chronological order).
-export function sparklinePath(prices: number[], width: number, height: number, pad = 2): string {
-  if (prices.length === 0) return "";
-  if (prices.length === 1) {
-    const y = height / 2;
-    return `M ${pad} ${y} L ${width - pad} ${y}`;
-  }
+export interface ChartGeometry {
+  line: string; // SVG path of the price line (chronological)
+  area: string; // the line closed down to the baseline, for the gradient fill
+  min: number;
+  max: number;
+  lastX: number; // last trade's point, for the marker dot
+  lastY: number;
+}
+
+// Geometry for the price chart. Prices are chronological. Null when empty; a
+// single trade renders as a centered flat point so the chart never looks broken.
+export function chartGeometry(
+  prices: number[],
+  width: number,
+  height: number,
+  pad = 4
+): ChartGeometry | null {
+  if (prices.length === 0) return null;
   const min = Math.min(...prices);
   const max = Math.max(...prices);
   const range = max - min || 1;
   const innerW = width - pad * 2;
   const innerH = height - pad * 2;
-  const step = innerW / (prices.length - 1);
-  return prices
-    .map((p, i) => {
-      const x = pad + i * step;
-      const y = pad + innerH - ((p - min) / range) * innerH;
-      return `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`;
-    })
-    .join(" ");
+  const single = prices.length === 1;
+  const step = single ? 0 : innerW / (prices.length - 1);
+  const pts = prices.map((p, i) => {
+    const x = pad + (single ? innerW / 2 : i * step);
+    const y = pad + innerH - ((p - min) / range) * innerH;
+    return [x, y] as const;
+  });
+  const line = pts.map(([x, y], i) => `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`).join(" ");
+  const base = (height - pad).toFixed(1);
+  const area = `${line} L ${pts[pts.length - 1][0].toFixed(1)} ${base} L ${pts[0][0].toFixed(1)} ${base} Z`;
+  const [lastX, lastY] = pts[pts.length - 1];
+  return { line, area, min, max, lastX, lastY };
 }
