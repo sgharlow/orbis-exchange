@@ -69,6 +69,15 @@ describe("persistTick", () => {
     const tick = await pool.query("SELECT generation, cells_changed FROM ticks");
     expect(tick.rows).toEqual([{ generation: "7", cells_changed: 0 }]);
   });
+
+  it("completes a previously claimed generation instead of colliding", async () => {
+    await claimGeneration(pool, 9);
+    await persistTick(pool, 9, [{ id: 1, density: 41 }]);
+    const { rows } = await pool.query(
+      "SELECT generation, cells_changed, (completed_at IS NOT NULL) AS done FROM ticks"
+    );
+    expect(rows).toEqual([{ generation: "9", cells_changed: 1, done: true }]);
+  });
 });
 
 describe("claimGeneration", () => {

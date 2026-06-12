@@ -370,7 +370,9 @@ export async function persistTick(
     await client.query("BEGIN");
     await client.query(
       `INSERT INTO ticks (generation, started_at, completed_at, cells_changed)
-       VALUES ($1, now(), now(), $2)`,
+         VALUES ($1, now(), now(), $2)
+         ON CONFLICT (generation) DO UPDATE
+           SET completed_at = now(), cells_changed = EXCLUDED.cells_changed`,
       [generation, updates.length]
     );
     for (const u of updates) {
