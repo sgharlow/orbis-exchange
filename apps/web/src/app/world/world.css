@@ -338,10 +338,6 @@ body {
   text-transform: uppercase;
   color: #5f7aa6;
 }
-.spark {
-  opacity: 0.9;
-}
-
 .book {
   display: flex;
   flex-direction: column;
@@ -588,4 +584,23 @@ body {
 
 .list-cell {
   opacity: 0.75;
+}
+
+@media (max-width: 600px) {
+  .world-title {
+    font-size: clamp(1.6rem, 8vw, 2.2rem);
+  }
+  .commodity-tabs {
+    flex-wrap: wrap;
+  }
+  .ticket-inputs {
+    flex-direction: column;
+  }
+  .ticket-inputs .field input,
+  .join input {
+    font-size: 16px; /* prevents iOS zoom-on-focus */
+  }
+  .claim-line {
+    font-size: 0.78rem;
+  }
 }

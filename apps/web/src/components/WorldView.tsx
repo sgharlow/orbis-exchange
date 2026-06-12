@@ -281,8 +281,8 @@ export function WorldView({
         title="Click a cell to claim it"
         aria-label={`Living resource field for region ${region}, ${size} by ${size} cells. Click a cell to claim it.`}
         style={{
-          width: "min(72vmin, 620px)",
-          height: "min(72vmin, 620px)",
+          width: "min(92vw, 72vh, 620px)",
+          height: "min(92vw, 72vh, 620px)",
           borderRadius: 10,
           background: FIELD_BG,
           cursor: "crosshair",
