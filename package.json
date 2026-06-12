@@ -11,6 +11,12 @@
     "dev": "pnpm --filter @orbis/web dev",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
-    "lint": "pnpm -r lint"
+    "lint": "pnpm -r lint",
+    "guide:shots": "node scripts/capture-guide-shots.mjs",
+    "guide:pdf": "node scripts/build-user-guide-pdf.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.0",
+    "marked": "^15.0.0"
   }
 }
