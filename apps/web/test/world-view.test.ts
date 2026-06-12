@@ -5,6 +5,7 @@ import {
   WORLD_RESOURCE_TYPES,
   ownershipOf,
   cellIndexFromPoint,
+  outlineFor,
 } from "../src/lib/world-view.js";
 
 function alphaOf(rgba: string): number {
@@ -52,6 +53,23 @@ describe("ownershipOf", () => {
     expect(ownershipOf("me", "me")).toBe(1);
     expect(ownershipOf("you", "me")).toBe(2);
     expect(ownershipOf("you", null)).toBe(2); // not joined -> everything owned is "other"
+  });
+});
+
+describe("outlineFor", () => {
+  it("your own cell outlines as own, even when listed", () => {
+    expect(outlineFor("p1", "p1", null)).toBe("own");
+    expect(outlineFor("p1", "p1", "500")).toBe("own");
+  });
+  it("another player's listed cell reads as listed", () => {
+    expect(outlineFor("p2", "p1", "500")).toBe("listed");
+  });
+  it("another player's unlisted cell is other", () => {
+    expect(outlineFor("p2", "p1", null)).toBe("other");
+  });
+  it("unclaimed cells get no outline", () => {
+    expect(outlineFor(null, "p1", null)).toBe(null);
+    expect(outlineFor(null, null, null)).toBe(null);
   });
 });
 

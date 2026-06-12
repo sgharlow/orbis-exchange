@@ -6,9 +6,10 @@ import {
   cellColor,
   legendColor,
   WORLD_RESOURCE_TYPES,
-  ownershipOf,
+  outlineFor,
   cellIndexFromPoint,
 } from "@/lib/world-view";
+import { formatCredits } from "@/lib/market-view";
 
 const CELL = 9; // logical px per cell
 const POLL_MS = 3000; // matches the simulation tick (spec §5.2)
@@ -42,6 +43,9 @@ export function WorldView({
   const targetRef = useRef<Float32Array>(new Float32Array(n));
   const idsRef = useRef<string[]>([]); // cell id by index (for claiming)
   const ownerIdsRef = useRef<(string | null)[]>([]); // owner by index (for outlines)
+  const listPricesRef = useRef<(string | null)[]>([]);
+  const [sel, setSel] = useState<{ idx: number; cellId: string; price: string | null } | null>(null);
+  const [askPrice, setAskPrice] = useState("");
   const myIdRef = useRef<string | null>(null);
   const rafRef = useRef<number | null>(null);
   const redrawRef = useRef<(() => void) | null>(null);
@@ -51,18 +55,21 @@ export function WorldView({
     const types = new Array<string>(n).fill("ore");
     const ids = new Array<string>(n).fill("");
     const owners = new Array<string | null>(n).fill(null);
+    const prices = new Array<string | null>(n).fill(null);
     const display = displayRef.current;
     for (const c of initialCells) {
       const i = c.y * size + c.x;
       types[i] = c.resource_type;
       ids[i] = c.id;
       owners[i] = c.owner_id;
+      prices[i] = c.list_price;
       display[i] = c.density;
       targetRef.current[i] = c.density;
     }
     typesRef.current = types;
     idsRef.current = ids;
     ownerIdsRef.current = owners;
+    listPricesRef.current = prices;
   }
 
   useEffect(() => {
@@ -91,10 +98,15 @@ export function WorldView({
         const y = Math.floor(i / size) * CELL;
         ctx.fillStyle = cellColor(types[i], display[i]);
         ctx.fillRect(x, y, CELL - 0.6, CELL - 0.6); // tiny gap reads as a grid
-        const own = ownershipOf(owners[i], me);
-        if (own !== 0) {
-          ctx.strokeStyle = own === 1 ? "rgba(238,243,255,0.95)" : "rgba(150,170,210,0.5)";
-          ctx.lineWidth = own === 1 ? 1.5 : 1;
+        const o = outlineFor(owners[i], me, listPricesRef.current[i]);
+        if (o !== null) {
+          ctx.strokeStyle =
+            o === "own"
+              ? "rgba(238,243,255,0.95)"
+              : o === "listed"
+                ? "rgba(245,196,80,0.95)"
+                : "rgba(150,170,210,0.5)";
+          ctx.lineWidth = o === "other" ? 1 : 1.5;
           ctx.strokeRect(x + 0.75, y + 0.75, CELL - 2.1, CELL - 2.1);
         }
       }
@@ -141,6 +153,7 @@ export function WorldView({
           target[i] = c.density;
           owners[i] = c.owner_id; // refresh ownership outlines
           ids[i] = c.id;
+          listPricesRef.current[i] = c.list_price;
         }
         kick();
         draw(); // ensure ownership repaint even if densities are settled
@@ -194,6 +207,15 @@ export function WorldView({
     const cellId = idsRef.current[idx];
     if (!cellId) return;
 
+    const meNow = myIdRef.current ?? window.localStorage.getItem("orbis_player_id");
+    if (ownerIdsRef.current[idx] !== null && meNow !== null && ownerIdsRef.current[idx] === meNow) {
+      const price = listPricesRef.current[idx];
+      setAskPrice(price ?? "");
+      setSel({ idx, cellId, price });
+      setClaimMsg(null);
+      return;
+    }
+
     setClaimMsg({ kind: "info", text: "claiming…" });
     try {
       const res = await fetch("/api/claims", {
@@ -217,6 +239,35 @@ export function WorldView({
           text: r === "taken" ? "already claimed" : r === "insufficient_credits" ? "not enough credits (500)" : "could not claim",
         });
       }
+    } catch {
+      setClaimMsg({ kind: "err", text: "network error" });
+    }
+  }
+
+  async function submitListing(price: number | null) {
+    if (!sel) return;
+    try {
+      const res = await fetch(`/api/claims/${sel.cellId}/list`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ price }),
+      });
+      if (res.status === 401) {
+        setClaimMsg({ kind: "err", text: "join via the market panel first" });
+        return;
+      }
+      const data = await res.json();
+      if (!res.ok) {
+        setClaimMsg({ kind: "err", text: data.error ?? "could not list" });
+        return;
+      }
+      listPricesRef.current[sel.idx] = price === null ? null : String(price);
+      redrawRef.current?.();
+      setClaimMsg({
+        kind: "ok",
+        text: price === null ? "cell unlisted" : `listed for ${formatCredits(price)} cr — gold outline marks it for sale`,
+      });
+      setSel(null);
     } catch {
       setClaimMsg({ kind: "err", text: "network error" });
     }
@@ -256,10 +307,35 @@ export function WorldView({
         </span>
       </div>
       <div className="claim-line">
-        {claimMsg ? (
+        {sel ? (
+          <span className="list-form">
+            <span className="list-cell">cell {sel.cellId}{sel.price ? ` · listed at ${formatCredits(sel.price)}` : ""}</span>
+            <input
+              inputMode="numeric"
+              placeholder="price"
+              value={askPrice}
+              onChange={(e) => setAskPrice(e.target.value)}
+              aria-label="list price"
+            />
+            <button
+              onClick={() => {
+                const p = Number(askPrice);
+                if (!Number.isInteger(p) || p <= 0) {
+                  setClaimMsg({ kind: "err", text: "enter a positive whole price" });
+                  return;
+                }
+                submitListing(p);
+              }}
+            >
+              list
+            </button>
+            {sel.price !== null && <button onClick={() => submitListing(null)}>unlist</button>}
+            <button onClick={() => setSel(null)} aria-label="close">✕</button>
+          </span>
+        ) : claimMsg ? (
           <span className={`claim-msg ${claimMsg.kind}`}>{claimMsg.text}</span>
         ) : (
-          <span className="claim-hint">click a cell to claim it — claimed cells mine resources each tick</span>
+          <span className="claim-hint">click a cell to claim it — claimed cells mine resources each tick · click your own cell to sell it</span>
         )}
       </div>
       <ul className="legend" aria-label="Resource legend">
@@ -272,6 +348,10 @@ export function WorldView({
         <li className="legend-item">
           <span className="legend-swatch legend-own" />
           your cell
+        </li>
+        <li className="legend-item">
+          <span className="legend-swatch legend-listed" />
+          for sale
         </li>
       </ul>
     </div>

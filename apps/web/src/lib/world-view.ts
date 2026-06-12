@@ -47,6 +47,20 @@ export function ownershipOf(ownerId: string | null, myId: string | null): Owners
   return myId !== null && ownerId === myId ? 1 : 2;
 }
 
+// Which outline a cell gets: your cells outline bright (white), cells another
+// player has listed for sale outline gold, other owned cells a faint grey.
+export type Outline = "own" | "listed" | "other" | null;
+export function outlineFor(
+  ownerId: string | null,
+  myId: string | null,
+  listPrice: string | null
+): Outline {
+  const own = ownershipOf(ownerId, myId);
+  if (own === 1) return "own";
+  if (own === 2) return listPrice !== null ? "listed" : "other";
+  return null;
+}
+
 // Map a click position (relative to the rendered canvas) to a grid index, or null
 // if outside the grid. pixelW/pixelH are the canvas's displayed CSS size.
 export function cellIndexFromPoint(
