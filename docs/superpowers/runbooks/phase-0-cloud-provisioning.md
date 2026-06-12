@@ -31,7 +31,7 @@ Manual, user-approved steps to take Orbis Exchange Phase 0 from "green locally" 
 
 ## E. Seed the live cluster
 - [ ] `DB_MODE=dsql DSQL_HOST=<host> DSQL_REGION=<region> pnpm db:seed`
-- [ ] Inserts 2 players + 4 `market_state` rows (idempotent via `ON CONFLICT DO NOTHING`).
+- [ ] Inserts 10 players (alice + bot-maker + 8 algorithmic agents) + 4 `market_state` rows + the 64×64 world grid (idempotent via `ON CONFLICT DO NOTHING`).
 
 ## F. Smoke-test the live cluster (the pre-deploy gate)
 - [ ] `DB_MODE=dsql DSQL_HOST=<host> DSQL_REGION=<region> pnpm db:smoke`
@@ -46,7 +46,7 @@ Manual, user-approved steps to take Orbis Exchange Phase 0 from "green locally" 
 
 ## H. Verify the live spine
 - [ ] `curl https://<deployment>/api/health` → `{"ok":true,"migrations":["0001_init","0002_indexes","0003_invest","0004_cell_listing"]}`
-- [ ] Visit `https://<deployment>/` → leaderboard shows the 2 seeded players (`bot-maker` tagged `(AI)`).
+- [ ] Visit `https://<deployment>/` → leaderboard shows the 10 seeded players (agents tagged `(AI)`).
 - [ ] This proves the full path: browser → Vercel route handler → DSQL over IAM auth → browser. **Phase 0's headline deliverable.**
 
 ## I. Cost guardrails (do this BEFORE leaving anything running)
