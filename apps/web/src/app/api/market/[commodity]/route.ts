@@ -8,7 +8,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ com
   const { commodity } = await params;
   const pool = createPool();
   try {
-    return NextResponse.json(await getMarket(pool, commodity));
+    return NextResponse.json(await getMarket(pool, commodity), {
+      headers: { "Cache-Control": "public, s-maxage=2, stale-while-revalidate=4" },
+    });
   } catch (err) {
     return NextResponse.json({ ok: false, error: (err as Error).message }, { status: 503 });
   } finally {
