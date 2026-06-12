@@ -298,7 +298,8 @@ export async function ensurePlayer(
 }
 
 // One cell as the world view needs it: id (to claim by), position, type (hue),
-// density (brightness), and owner (null = unclaimed; drives the outline).
+// density (brightness), owner (null = unclaimed; drives the outline), and the
+// list price when the owner has put the cell up for sale (null = not listed).
 export interface WorldCell {
   id: string;
   x: number;
@@ -306,11 +307,12 @@ export interface WorldCell {
   resource_type: string;
   density: number;
   owner_id: string | null;
+  list_price: string | null; // BIGINT — set when the owner has listed the cell for sale
 }
 
 export async function getWorld(pool: pg.Pool, region: string): Promise<WorldCell[]> {
   const { rows } = await pool.query<WorldCell>(
-    `SELECT id, x, y, resource_type, density, owner_id FROM cells WHERE region = $1 ORDER BY y, x`,
+    `SELECT id, x, y, resource_type, density, owner_id, list_price FROM cells WHERE region = $1 ORDER BY y, x`,
     [region]
   );
   return rows;

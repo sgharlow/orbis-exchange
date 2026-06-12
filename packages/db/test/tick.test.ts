@@ -93,9 +93,9 @@ describe("world view reads", () => {
   it("getWorld returns render fields ordered by y, x", async () => {
     const world = await getWorld(pool, "rt");
     expect(world).toEqual([
-      { id: "1", x: 0, y: 0, resource_type: "ore", density: 50, owner_id: null },
-      { id: "2", x: 1, y: 0, resource_type: "ore", density: 20, owner_id: null },
-      { id: "3", x: 2, y: 0, resource_type: "ore", density: 80, owner_id: null },
+      { id: "1", x: 0, y: 0, resource_type: "ore", density: 50, owner_id: null, list_price: null },
+      { id: "2", x: 1, y: 0, resource_type: "ore", density: 20, owner_id: null, list_price: null },
+      { id: "3", x: 2, y: 0, resource_type: "ore", density: 80, owner_id: null, list_price: null },
     ]);
   });
 
