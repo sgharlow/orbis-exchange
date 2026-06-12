@@ -25,7 +25,7 @@ afterAll(async () => {
 describe("runTick (load -> CA -> persist deltas)", () => {
   it("persists only changed cells, stamps the generation, and records the tick", async () => {
     const result = await runTick(pool, "rt", 1);
-    expect(result).toEqual({ generation: 1, cellsChanged: 3, mined: 0 }); // no owned cells
+    expect(result).toEqual({ generation: 1, cellsChanged: 3, mined: 0, skipped: false }); // no owned cells
 
     const { rows } = await pool.query(
       "SELECT id, density, updated_gen FROM cells ORDER BY id"
@@ -69,5 +69,17 @@ describe("runTick (load -> CA -> persist deltas)", () => {
     // lone cell withers (-6) and is mined (-8): 80 -> 66
     const cell = await pool.query("SELECT density, updated_gen FROM cells WHERE id = 9");
     expect(cell.rows[0]).toEqual({ density: 66, updated_gen: "1" });
+  });
+
+  it("skips a generation another worker already claimed (single-flight)", async () => {
+    const first = await runTick(pool, "rt", 1);
+    expect(first.skipped).toBe(false);
+
+    const second = await runTick(pool, "rt", 1); // overlapping invocation, same gen
+    expect(second).toEqual({ generation: 1, cellsChanged: 0, mined: 0, skipped: true });
+
+    // the world advanced exactly once — one ticks row, densities written once
+    const ticks = await pool.query("SELECT count(*)::int AS n FROM ticks");
+    expect(ticks.rows[0].n).toBe(1);
   });
 });

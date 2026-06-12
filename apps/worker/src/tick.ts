@@ -1,4 +1,4 @@
-import { loadRegionCells, persistTick, persistYields, loadOwnerLevels, type Pool } from "@orbis/db";
+import { loadRegionCells, persistTick, persistYields, loadOwnerLevels, claimGeneration, type Pool } from "@orbis/db";
 import { computeTick, cellKey, type CACell } from "./ca.js";
 import { computeMining, multiplierForLevel } from "./mining.js";
 
@@ -6,6 +6,7 @@ export interface RunTickResult {
   generation: number;
   cellsChanged: number;
   mined: number;
+  skipped: boolean;
 }
 
 export interface RunTickOptions {
@@ -24,6 +25,11 @@ export async function runTick(
   generation: number,
   options: RunTickOptions = {}
 ): Promise<RunTickResult> {
+  // Claim the generation before any work: if another invocation owns it, do
+  // nothing — no CA compute, no mining, no persistence (single-flight).
+  const claimed = await claimGeneration(pool, generation);
+  if (!claimed) return { generation, cellsChanged: 0, mined: 0, skipped: true };
+
   const cells = await loadRegionCells(pool, region);
 
   const levels = await loadOwnerLevels(pool, region);
@@ -45,5 +51,5 @@ export async function runTick(
   await persistYields(pool, mining.yields);
 
   const mined = mining.yields.reduce((sum, y) => sum + y.qty, 0);
-  return { generation, cellsChanged: updates.length, mined };
+  return { generation, cellsChanged: updates.length, mined, skipped: false };
 }
