@@ -7,6 +7,7 @@ import {
   getWorld,
   getWorldSince,
   getLatestGeneration,
+  claimGeneration,
 } from "../src/queries.js";
 
 const pool = createPool();
@@ -67,6 +68,15 @@ describe("persistTick", () => {
     await persistTick(pool, 7, []);
     const tick = await pool.query("SELECT generation, cells_changed FROM ticks");
     expect(tick.rows).toEqual([{ generation: "7", cells_changed: 0 }]);
+  });
+});
+
+describe("claimGeneration", () => {
+  it("claims a fresh generation exactly once — the second claimant is told no", async () => {
+    expect(await claimGeneration(pool, 1)).toBe(true);
+    expect(await claimGeneration(pool, 1)).toBe(false);
+    const { rows } = await pool.query("SELECT generation, completed_at FROM ticks");
+    expect(rows).toEqual([{ generation: "1", completed_at: null }]);
   });
 });
 

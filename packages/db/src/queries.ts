@@ -343,6 +343,19 @@ export interface CellUpdate {
   density: number;
 }
 
+// Atomically claim a generation before computing a tick. The ticks row IS the
+// lock: ticks_pkey lets exactly one worker insert generation N, so overlapping
+// scheduled invocations skip cleanly instead of colliding mid-tick (spec §5.2).
+// persistTick later completes the same row (completed_at + cells_changed).
+export async function claimGeneration(pool: pg.Pool, generation: number): Promise<boolean> {
+  const { rowCount } = await pool.query(
+    `INSERT INTO ticks (generation, started_at) VALUES ($1, now())
+       ON CONFLICT (generation) DO NOTHING`,
+    [generation]
+  );
+  return (rowCount ?? 0) > 0;
+}
+
 // Persist one tick: write ONLY the changed cells (the cost guardrail — never the
 // full grid; spec §5.2/§11) and record the tick. One short transaction; the
 // region's single worker is the only writer, so no OCC contention here (that

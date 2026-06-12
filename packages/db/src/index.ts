@@ -4,6 +4,7 @@ export {
   getLeaderboard,
   loadRegionCells,
   persistTick,
+  claimGeneration,
   getWorld,
   getWorldSince,
   getLatestGeneration,
