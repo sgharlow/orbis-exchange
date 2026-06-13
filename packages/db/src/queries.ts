@@ -358,37 +358,62 @@ export async function claimGeneration(pool: pg.Pool, generation: number): Promis
   return (rowCount ?? 0) > 0;
 }
 
+// Max cell rows written per transaction. Aurora DSQL caps a transaction at ~3000
+// modified rows, so a generation that changes the whole grid (4096 cells) must be
+// split — otherwise the whole tick is rejected with "transaction row limit
+// exceeded" and the world freezes. 500 mirrors seed.ts/insertCells and stays well
+// under both the DSQL row cap and pg's parameter limit. (Local Postgres has no
+// such cap; this keeps a single code path that is correct on both.)
+export const CELL_WRITE_BATCH = 500;
+
 // Persist one tick: write ONLY the changed cells (the cost guardrail — never the
-// full grid; spec §5.2/§11) and record the tick. One short transaction; the
-// region's single worker is the only writer, so no OCC contention here (that
-// matters for settlement, §6.1, not for cell deltas).
+// full grid; spec §5.2/§11) and record the tick. Cell deltas go out in bounded
+// chunks, each its own transaction, to respect DSQL's per-transaction row limit;
+// a multi-row UPDATE per chunk also keeps it to one round-trip per batch (the
+// region's single worker is the only writer, so there is no OCC contention on
+// cells — that matters only for settlement, §6.1). Cross-chunk atomicity is not
+// needed: the CA recomputes from current state each tick. The tick row is
+// completed last, so cells_changed reflects what actually persisted.
 export async function persistTick(
   pool: pg.Pool,
   generation: number,
-  updates: CellUpdate[]
+  updates: CellUpdate[],
+  batchSize: number = CELL_WRITE_BATCH
 ): Promise<void> {
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-    await client.query(
-      `INSERT INTO ticks (generation, started_at, completed_at, cells_changed)
-         VALUES ($1, now(), now(), $2)
-         ON CONFLICT (generation) DO UPDATE
-           SET completed_at = now(), cells_changed = EXCLUDED.cells_changed`,
-      [generation, updates.length]
-    );
-    for (const u of updates) {
-      await client.query(`UPDATE cells SET density = $2, updated_gen = $3 WHERE id = $1`, [
-        u.id,
-        u.density,
-        generation,
-      ]);
+  for (let i = 0; i < updates.length; i += batchSize) {
+    const batch = updates.slice(i, i + batchSize);
+    const values: string[] = [];
+    const params: unknown[] = [generation];
+    batch.forEach((u, j) => {
+      const b = j * 2 + 2; // $1 is generation; pairs start at $2
+      values.push(`($${b}::bigint, $${b + 1}::smallint)`);
+      params.push(u.id, u.density);
+    });
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query(
+        `UPDATE cells AS c
+            SET density = v.density, updated_gen = $1::bigint
+           FROM (VALUES ${values.join(",")}) AS v(id, density)
+          WHERE c.id = v.id`,
+        params
+      );
+      await client.query("COMMIT");
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
     }
-    await client.query("COMMIT");
-  } catch (err) {
-    await client.query("ROLLBACK");
-    throw err;
-  } finally {
-    client.release();
   }
+
+  // Record/complete the tick row (1 row, its own auto-commit) after the cells land.
+  await pool.query(
+    `INSERT INTO ticks (generation, started_at, completed_at, cells_changed)
+       VALUES ($1, now(), now(), $2)
+       ON CONFLICT (generation) DO UPDATE
+         SET completed_at = now(), cells_changed = EXCLUDED.cells_changed`,
+    [generation, updates.length]
+  );
 }

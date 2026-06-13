@@ -12,6 +12,38 @@ import {
 
 const pool = createPool();
 
+// Recording proxy over a real pool: counts cell rows modified per committed
+// transaction, so we can assert persistTick never exceeds Aurora DSQL's
+// per-transaction modified-row limit (~3000). Local Postgres has no such cap, so
+// we verify the CONTRACT (bounded transactions) rather than the DSQL error itself.
+// Uses ONE dedicated client with a no-op release, so the shared pool's connections
+// are never monkeypatched (which would leak across tests).
+async function recordingPool(real: ReturnType<typeof createPool>) {
+  const txCellRows: number[] = [];
+  let current = 0;
+  const client = await real.connect();
+  const run = client.query.bind(client);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const instrumented = async (sql: any, params?: any) => {
+    const text: string = typeof sql === "string" ? sql : sql.text;
+    if (/^\s*BEGIN/i.test(text)) current = 0;
+    const res = await run(sql, params);
+    if (/\bcells\b/i.test(text) && /update|insert/i.test(text)) current += res?.rowCount ?? 0;
+    if (/^\s*COMMIT/i.test(text)) txCellRows.push(current);
+    return res;
+  };
+  const proxy = {
+    connect: async () => ({ query: instrumented, release: () => {} }),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    query: (sql: any, params?: any) => real.query(sql, params),
+  };
+  return {
+    proxy: proxy as unknown as ReturnType<typeof createPool>,
+    txCellRows,
+    dispose: () => client.release(),
+  };
+}
+
 async function seedCells() {
   // region 'rt': three cells at gen 0
   await pool.query(
@@ -62,6 +94,51 @@ describe("persistTick", () => {
 
     const tick = await pool.query("SELECT generation, cells_changed FROM ticks");
     expect(tick.rows).toEqual([{ generation: "1", cells_changed: 2 }]);
+  });
+
+  it("bounds each transaction to the batch size of cell rows (DSQL row-limit safety)", async () => {
+    await pool.query(
+      `INSERT INTO cells (id, region, x, y, resource_type, density, updated_gen) VALUES
+         (10,'rb',0,1,'ore',10,0),(11,'rb',1,1,'ore',10,0),(12,'rb',2,1,'ore',10,0),
+         (13,'rb',3,1,'ore',10,0),(14,'rb',4,1,'ore',10,0)`
+    );
+    const { proxy, txCellRows, dispose } = await recordingPool(pool);
+
+    try {
+      await persistTick(
+        proxy,
+        5,
+        [
+          { id: 10, density: 1 },
+          { id: 11, density: 2 },
+          { id: 12, density: 3 },
+          { id: 13, density: 4 },
+          { id: 14, density: 5 },
+        ],
+        2 // batchSize — force chunking with a tiny cap
+      );
+    } finally {
+      dispose();
+    }
+
+    // The DSQL contract: no single transaction modifies more than the batch size.
+    expect(Math.max(...txCellRows)).toBeLessThanOrEqual(2);
+    // And it genuinely chunked: 5 cells / batch 2 => 3 cell-writing transactions.
+    expect(txCellRows.filter((n) => n > 0).length).toBe(3);
+
+    // Correctness preserved: every cell updated + stamped, tick recorded.
+    const { rows } = await pool.query(
+      "SELECT id, density, updated_gen FROM cells WHERE region='rb' ORDER BY id"
+    );
+    expect(rows).toEqual([
+      { id: "10", density: 1, updated_gen: "5" },
+      { id: "11", density: 2, updated_gen: "5" },
+      { id: "12", density: 3, updated_gen: "5" },
+      { id: "13", density: 4, updated_gen: "5" },
+      { id: "14", density: 5, updated_gen: "5" },
+    ]);
+    const tick = await pool.query("SELECT generation, cells_changed FROM ticks");
+    expect(tick.rows).toEqual([{ generation: "5", cells_changed: 5 }]);
   });
 
   it("records a no-op tick with zero changes", async () => {
