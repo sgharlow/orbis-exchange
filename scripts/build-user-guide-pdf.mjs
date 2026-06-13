@@ -24,7 +24,7 @@ const html = `<!doctype html>
   h2 { font-size:12px; letter-spacing:0.3em; text-transform:uppercase; color:#6f86b3; border-top:1px solid var(--line); padding-top:12px; margin:20px 0 10px; break-after:avoid; }
   em { color:var(--dim); }
   strong { color:#e7eefc; font-weight:500; }
-  img { max-width:100%; max-height:260px; object-fit:contain; object-position:top left; border:1px solid var(--line); border-radius:8px; margin:6px 0 2px; break-inside:avoid; }
+  img { max-height:700px; width:auto; max-width:100%; object-fit:contain; object-position:top left; display:block; border:1px solid var(--line); border-radius:8px; margin:6px 0 2px; break-inside:avoid; }
   p, li { color:var(--ink); }
   blockquote { margin:0; padding-left:10px; border-left:2px solid var(--line); color:var(--dim); }
   table { border-collapse:collapse; width:100%; font-size:11px; break-inside:avoid; }
