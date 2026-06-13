@@ -100,6 +100,10 @@ export function WorldView({
         ctx.fillRect(x, y, CELL - 0.6, CELL - 0.6); // tiny gap reads as a grid
         const o = outlineFor(owners[i], me, listPricesRef.current[i]);
         if (o !== null) {
+          if (o === "listed") {
+            ctx.fillStyle = "rgba(245, 196, 80, 0.38)";
+            ctx.fillRect(x, y, CELL - 0.6, CELL - 0.6);
+          }
           ctx.strokeStyle =
             o === "own"
               ? "rgba(238,243,255,0.95)"
