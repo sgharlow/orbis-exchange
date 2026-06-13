@@ -122,10 +122,11 @@ await shot(page, "02-join.png", 'section[aria-label="Market"]');
 // join as "guide" — a fresh player with 10,000 credits
 await page.fill('input[aria-label="handle"]', "guide");
 await page.press('input[aria-label="handle"]', "Enter");
-await page.waitForSelector(".ticket-who");
+await page.waitForSelector(".ticket-who", { timeout: 30_000 });
 // After joining the market panel expands (price/qty inputs get focused by the browser)
 // which auto-scrolls the page away from the canvas. Scroll back to top.
 await page.evaluate(() => window.scrollTo(0, 0));
+await sleep(600); // let any residual focus-driven auto-scroll finish
 
 // pick the brightest unclaimed interior cell, claim it (retry next-best if raced)
 let claimed = null;
@@ -137,7 +138,7 @@ for (let attempt = 0; attempt < 3 && !claimed; attempt++) {
   const { px, py } = await cellPoint(page, target.x, target.y);
   await page.mouse.click(px, py);
   // wait for the resolved state (ok or err), not just the info/pending flash
-  const msg = await page.waitForSelector(".claim-msg.ok, .claim-msg.err", { timeout: 10_000 });
+  const msg = await page.waitForSelector(".claim-msg.ok, .claim-msg.err", { timeout: 20_000 });
   const ok = (await msg.getAttribute("class")).includes("ok");
   if (ok) claimed = target;
 }
@@ -169,22 +170,46 @@ console.log(`claimed cell (${claimed.x},${claimed.y}) density ${claimed.density}
 await sleep(TICK_MS * 5);
 
 // 05 — dashboard: credits, stats+upgrade, holdings
-// Badges must stay inside the .dash crop — use absolute placement with clear spacing
+// Badges must be placed with badgeAt() using coords from the .dash rect so
+// they fall INSIDE the element crop. Use the rect to compute safe anchor points
+// that sit in whitespace / padding rather than on top of text.
 await page.waitForSelector(".dash-hold"); // at least one holding has accrued
 {
-  const r = await page.evaluate(() => {
-    const el = document.querySelector(".dash");
-    const b = el.getBoundingClientRect();
-    return { l: b.left + window.scrollX, t: b.top + window.scrollY, w: b.width, h: b.height };
+  // Place all four badges using exact element anchor positions so they land in
+  // visible whitespace — no right-edge clipping, no text occlusion.
+  // Badge 1 = credits: centre of the top row gap (between handle and credit amount)
+  const credPos = await page.evaluate(() => {
+    const b1 = document.querySelector(".dash-handle").getBoundingClientRect();
+    const b2 = document.querySelector(".dash-credits").getBoundingClientRect();
+    return { x: (b1.right + b2.left) / 2 + window.scrollX,
+             y: (b1.top + b1.bottom) / 2 + window.scrollY - 14 };
   });
-  // Badge 1 = credits (quarter-right of width, near top)
-  await badgeAt(page, 1, r.l + Math.round(r.w * 0.55), r.t + 14);
-  // Badge 2 = stats row (left third)
-  await badgeAt(page, 2, r.l + 14, r.t + Math.round(r.h * 0.35));
-  // Badge 3 = holdings/inventory (left, lower)
-  await badgeAt(page, 3, r.l + 14, r.t + Math.round(r.h * 0.7));
-  // Badge 4 = upgrade button (right side, stats row height)
-  await badgeAt(page, 4, r.l + Math.round(r.w * 0.75), r.t + Math.round(r.h * 0.35));
+  await badgeAt(page, 1, credPos.x - 14, credPos.y);
+  // Badge 2 = stats row: gap between "extraction L0" text and the upgrade button
+  const statsPos = await page.evaluate(() => {
+    const stats = document.querySelectorAll(".dash-stat");
+    const lastStat = stats[stats.length - 1].getBoundingClientRect();
+    const btn = document.querySelector(".dash-upgrade").getBoundingClientRect();
+    return { x: (lastStat.right + btn.left) / 2 + window.scrollX - 14,
+             y: (lastStat.top + lastStat.bottom) / 2 + window.scrollY - 14 };
+  });
+  await badgeAt(page, 2, statsPos.x, statsPos.y);
+  // Badge 3 = holdings row: right of the inventory commodity text (empty space)
+  const invPos = await page.evaluate(() => {
+    const hold = document.querySelector(".dash-hold");
+    const b = hold.getBoundingClientRect();
+    const dash = document.querySelector(".dash").getBoundingClientRect();
+    return { x: b.right + (dash.right - b.right) / 2 + window.scrollX - 14,
+             y: (b.top + b.bottom) / 2 + window.scrollY - 14 };
+  });
+  await badgeAt(page, 3, invPos.x, invPos.y);
+  // Badge 4 = upgrade button: centred on the button itself (labels it directly)
+  const btnPos = await page.evaluate(() => {
+    const b = document.querySelector(".dash-upgrade").getBoundingClientRect();
+    return { x: (b.left + b.right) / 2 + window.scrollX - 14,
+             y: (b.top + b.bottom) / 2 + window.scrollY - 14 };
+  });
+  await badgeAt(page, 4, btnPos.x, btnPos.y);
 }
 await shot(page, "05-dashboard.png", ".dash");
 
@@ -224,8 +249,11 @@ await shot(page, "06-market.png", 'section[aria-label="Market"]');
     await page.click(".btn-buy");
   }
   await page.waitForSelector(".ticket-msg.ok");
-  await badge(page, 1, ".ticket-msg", "tl", -8, 0);
-  await badge(page, 2, ".dash-credits", "tr", 20, 0);
+  // Badge 1 — below-left of .ticket-msg so it doesn't clip the fill message text
+  await badge(page, 1, ".ticket-msg", "bl", -8, 24);
+  // Badge 2 — above the dashboard credits, anchored to the dash-top row, left side
+  // (stays inside the Market section crop which includes the dash at the top)
+  await badge(page, 2, ".dash-top", "tr", -48, 0);
   await shot(page, "07-trade-fill.png", 'section[aria-label="Market"]');
 }
 
