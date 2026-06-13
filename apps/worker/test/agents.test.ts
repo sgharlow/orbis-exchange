@@ -41,8 +41,58 @@ describe("momentum", () => {
     expect(out).toEqual([{ commodity: "ore", side: "sell", price: 98, qty: 3 }]); // hits best bid
   });
 
-  it("does nothing without enough history", () => {
-    expect(decide("momentum", { commodity: "ore", size: 3 }, { ...rich, recentPrices: [100] })).toEqual([]);
+  // Cold start / flat market: there is no trend to follow, but the book stays
+  // frozen until someone takes. Momentum probes by lifting the best ask to
+  // bootstrap price discovery (value + makers bound the excursion). This is the
+  // fix for the cold-start deadlock where no agent ever crossed the spread.
+  it("probes the best ask when there is no trade history (cold start)", () => {
+    const out = decide("momentum", { commodity: "ore", size: 3 }, { ...rich, recentPrices: [] });
+    expect(out).toEqual([{ commodity: "ore", side: "buy", price: 102, qty: 3 }]);
+  });
+
+  it("probes the best ask with only a single trade of history", () => {
+    const out = decide("momentum", { commodity: "ore", size: 3 }, { ...rich, recentPrices: [100] });
+    expect(out).toEqual([{ commodity: "ore", side: "buy", price: 102, qty: 3 }]);
+  });
+
+  it("probes the best ask when the market is flat (prevents re-freeze)", () => {
+    // rich.recentPrices is [100, 100, 100] — no trend
+    const out = decide("momentum", { commodity: "ore", size: 3 }, rich);
+    expect(out).toEqual([{ commodity: "ore", side: "buy", price: 102, qty: 3 }]);
+  });
+
+  it("does not probe without a takeable ask on the book", () => {
+    const out = decide("momentum", { commodity: "ore", size: 3 }, { ...rich, recentPrices: [], bestAsk: null });
+    expect(out).toEqual([]);
+  });
+
+  it("does not probe a buy it cannot afford", () => {
+    const out = decide("momentum", { commodity: "ore", size: 3 }, { ...rich, recentPrices: [], credits: 10 });
+    expect(out).toEqual([]);
+  });
+
+  // The probe is anchor-reverting (default anchor 100), not buy-biased: when a
+  // flat market sits ABOVE the anchor it probes a SELL back toward it, so prices
+  // oscillate around the anchor instead of drifting upward forever.
+  it("probes a sell toward the anchor when a flat market is above it", () => {
+    const out = decide("momentum", { commodity: "ore", size: 3 }, { ...rich, lastPrice: 120, recentPrices: [120, 120, 120] });
+    expect(out).toEqual([{ commodity: "ore", side: "sell", price: 98, qty: 3 }]); // hits best bid
+  });
+
+  it("probes a buy toward the anchor when a flat market is below it", () => {
+    const out = decide("momentum", { commodity: "ore", size: 3 }, { ...rich, lastPrice: 80, recentPrices: [80, 80, 80] });
+    expect(out).toEqual([{ commodity: "ore", side: "buy", price: 102, qty: 3 }]); // takes best ask
+  });
+
+  it("respects a custom anchor param", () => {
+    // anchor 110: a flat market at 105 is BELOW the anchor → probe a buy
+    const out = decide("momentum", { commodity: "ore", size: 3, anchor: 110 }, { ...rich, lastPrice: 105, recentPrices: [105, 105] });
+    expect(out).toEqual([{ commodity: "ore", side: "buy", price: 102, qty: 3 }]);
+  });
+
+  it("does not probe a sell it has no inventory to back", () => {
+    const out = decide("momentum", { commodity: "ore", size: 3 }, { ...rich, lastPrice: 120, recentPrices: [120, 120], inventory: 0 });
+    expect(out).toEqual([]);
   });
 });
 

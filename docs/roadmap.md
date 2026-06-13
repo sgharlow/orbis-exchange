@@ -2,8 +2,8 @@
 
 > QA pass of `orbis-exchange-spec.md` (the build contract) vs the current
 > implementation, with all remaining work prioritized into a dated roadmap.
-> Rebaselined **2026-06-11 (evening — Part A complete)**: `pnpm -r test` =
-> **114 green** — db 51 + web 27 + worker 36; `pnpm -r lint` clean; Lambda
+> Rebaselined **2026-06-12** (AI cold-start fix): `pnpm -r test` =
+> **122 green** — db 51 + web 27 + worker 44; `pnpm -r lint` clean; Lambda
 > bundle builds + smokes; HEAD `18d8978` pushed. Implementation plan:
 > `docs/superpowers/plans/2026-06-11-complete-hackathon-entry.md` (Part A
 > tasks 1–11 ✅ done; Part B cloud/ship remains). Deadline
@@ -56,17 +56,17 @@ Legend: ✅ done · 🟡 partial · 🔴 missing · ⚪ stretch.
 
 ## Roadmap (prioritized, dated)
 
-### P0 (correctness) — AI market never trades (cold-start deadlock) — **NOT FIXED**
+### P0 (correctness) — AI market cold-start deadlock — ✅ FIXED 2026-06-12
 
-Found 2026-06-12 dogfood: the AI bots place orders but **never trade** (1 trade
-ever in the DB, and that one was the guide script). Makers post a non-crossing
-spread; momentum/value/arb are gated on a trade tape only a trade can create →
-permanent freeze, runaway `scout`. The submission's "machines trade against you"
-thesis is hollow in a bot-only/idle world. Engine is correct — fix is in agent
-behaviour, **not** `market.ts`. Full evidence + fix options + recommendation:
-**`docs/known-issue-ai-market-cold-start.md`**. Decide the fix (recommended:
-cold-start fallback on the takers) before recording the demo; ideally before the
-cloud dogfood so the deployed world looks alive.
+Found + fixed 2026-06-12 dogfood. The AI bots placed orders but **never traded**
+(1 trade ever in the DB — the guide script): makers posted a non-crossing spread
+and momentum/value/arb were gated on a trade tape only a trade could create →
+permanent freeze, runaway `scout`. **Fix (TDD'd, engine untouched):** an
+anchor-reverting cold-start probe on `momentum` (`apps/worker/src/agents.ts`) +
+full maker/momentum/value ecology on every commodity (`packages/db/src/seed.ts`,
+roster 8 → 14 agents). Verified live: all 4 commodities trade every generation
+and oscillate bounded near 100, no drift, no runaway. Details:
+**`docs/known-issue-ai-market-cold-start.md`**.
 
 ### P0 — Cloud spine (target **June 14**; user-gated AWS/Vercel mutations)
 

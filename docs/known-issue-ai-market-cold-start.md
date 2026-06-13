@@ -1,14 +1,45 @@
-# Known issue — the AI market never trades (cold-start bootstrap deadlock)
+# AI market cold-start deadlock — FIXED 2026-06-12
 
 **Found:** 2026-06-12 (local dogfood, gen ~837, DB ~2 days old)
-**Severity:** P0 for the submission's *credibility* (not a crash; the app runs and
-all 114 tests pass). The demo's whole thesis — "the machines trade against you,"
-with strongly-consistent settlement as "the demo's whole argument" (spec §6.1) —
-is currently hollow in a bot-only world.
-**Status:** root-caused, **not yet fixed** (user deferred the fix decision).
-**Engine note:** the matching engine and settlement transaction are **correct**.
-Do not change `packages/db/src/market.ts` to fix this — the defect is in agent
-behaviour / world initialisation, not in matching or the ledger.
+**Fixed:** 2026-06-12 (same session) — see **Resolution** below.
+**Severity (was):** P0 for the submission's *credibility* (not a crash). The
+demo's whole thesis — "the machines trade against you," with strongly-consistent
+settlement as "the demo's whole argument" (spec §6.1) — was hollow in a bot-only
+world.
+**Engine note:** the matching engine and settlement transaction were **correct**
+all along; the fix is in agent behaviour + the agent roster, not in
+`packages/db/src/market.ts` (untouched).
+
+## Resolution (verified live)
+
+Two changes, both TDD'd (worker suite 36 → **44 tests**, full repo **122**
+green, lint clean):
+
+1. **`apps/worker/src/agents.ts` — momentum gets an anchor-reverting cold-start
+   probe.** When momentum has no trend to follow (empty/flat trade tape) it now
+   crosses the spread toward a stable `anchor` (default 100): lifts the best ask
+   when price is at/below the anchor, hits the best bid when above it. This
+   bootstraps the first trade (breaking the deadlock) **and** keeps price
+   oscillating around the anchor instead of drifting — an earlier buy-only probe
+   inflated commodities that had no opposing pressure. Probe only takes a real
+   resting order and respects credit/inventory backing.
+2. **`packages/db/src/seed.ts` — every commodity now has the full
+   maker + momentum + value ecology** (added `momentum-{energy,biomass,rare}` and
+   `value-{energy,biomass,rare}`; roster 8 → 14 agents). Makers give liquidity,
+   momentum keeps discovery alive, value mean-reverts. Arb + scout unchanged.
+
+**Live result after a clean reseed (~18 generations):** all four commodities
+trade every generation (`filled ~18`/gen, was `0`) and oscillate bounded near
+100 — e.g. ore `102 100 100 102 100 100 102 100 100 102`, energy/biomass/rare all
+in 98–104 with no monotonic climb. Bot credits disperse realistically (makers
+earn the spread, momentum pays it, value waits at the mean). No runaway scout.
+
+Original diagnosis retained below for the record.
+
+---
+
+**Status:** root-caused (matching engine correct; defect in agent behaviour /
+world initialisation).
 
 ## Symptom
 

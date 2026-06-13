@@ -5,9 +5,13 @@ import { generateWorld, type CellSeed } from "./world.js";
 const COMMODITIES = ["ore", "energy", "biomass", "rare"] as const;
 
 // Algorithmic agents that seed liquidity and act as the opponent (spec §4.5).
-// A market maker per commodity plus a momentum and a value bot on the demo
-// commodity. Each starts well-capitalised and holding inventory so makers can
-// quote both sides from the first tick.
+// Every commodity gets the same three-way ecology: a market maker (liquidity), a
+// momentum trader (probes the spread to bootstrap price discovery so the book
+// never freezes uncrossed), and a value trader (mean-reversion that bounds the
+// excursion so prices oscillate rather than drift). The cross-commodity arb and
+// the scout operate on the demo commodity / globally. Each starts
+// well-capitalised and holding inventory so makers can quote both sides from the
+// first tick.
 const AGENT_CREDITS = 1_000_000;
 const AGENT_INVENTORY = 5_000;
 const AGENTS = [
@@ -19,6 +23,12 @@ const AGENTS = [
   { id: "a0000000-0000-0000-0000-0000000000a6", handle: "value-ore", strategy: "value", params: { commodity: "ore", size: 3, band: 0.04, lookback: 10 } },
   { id: "a0000000-0000-0000-0000-0000000000a7", handle: "scout-r0", strategy: "scout", params: { commodity: "ore", size: 1, region: "r0" } },
   { id: "a0000000-0000-0000-0000-0000000000a8", handle: "arb-bot", strategy: "arb", params: { commodity: "ore", size: 3, lookback: 10 } },
+  { id: "a0000000-0000-0000-0000-0000000000a9", handle: "momentum-energy", strategy: "momentum", params: { commodity: "energy", size: 3, lookback: 5 } },
+  { id: "a0000000-0000-0000-0000-0000000000aa", handle: "momentum-biomass", strategy: "momentum", params: { commodity: "biomass", size: 3, lookback: 5 } },
+  { id: "a0000000-0000-0000-0000-0000000000ab", handle: "momentum-rare", strategy: "momentum", params: { commodity: "rare", size: 3, lookback: 5 } },
+  { id: "a0000000-0000-0000-0000-0000000000ac", handle: "value-energy", strategy: "value", params: { commodity: "energy", size: 3, band: 0.04, lookback: 10 } },
+  { id: "a0000000-0000-0000-0000-0000000000ad", handle: "value-biomass", strategy: "value", params: { commodity: "biomass", size: 3, band: 0.04, lookback: 10 } },
+  { id: "a0000000-0000-0000-0000-0000000000ae", handle: "value-rare", strategy: "value", params: { commodity: "rare", size: 3, band: 0.04, lookback: 10 } },
 ] as const;
 
 async function seedAgents(pool: pg.Pool): Promise<void> {

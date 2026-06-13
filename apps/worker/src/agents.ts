@@ -13,6 +13,7 @@ export interface AgentParams {
   margin?: number; // maker: credits offset from the reference price
   band?: number; // value: fractional deviation from the mean to act on
   lookback?: number; // momentum/value: trades to consider
+  anchor?: number; // momentum: price the flat/cold-start probe reverts toward (default 100)
   region?: string; // scout: which region to claim cells in (default r0)
 }
 
@@ -58,15 +59,34 @@ export function decide(strategy: Strategy, params: AgentParams, ctx: AgentContex
   if (strategy === "momentum") {
     // Buy into rising prices, sell into falling ones, taking resting liquidity.
     const recent = ctx.recentPrices.slice(-(params.lookback ?? 5));
-    if (recent.length < 2) return out;
     const first = recent[0];
     const last = recent[recent.length - 1];
-    if (last > first) {
-      const price = ctx.bestAsk ?? last;
-      if (canBuy(ctx, price, size)) out.push({ commodity, side: "buy", price, qty: size });
-    } else if (last < first) {
-      const price = ctx.bestBid ?? last;
-      if (canSell(ctx, size)) out.push({ commodity, side: "sell", price, qty: size });
+    if (recent.length >= 2 && last !== first) {
+      if (last > first) {
+        const price = ctx.bestAsk ?? last;
+        if (canBuy(ctx, price, size)) out.push({ commodity, side: "buy", price, qty: size });
+      } else {
+        const price = ctx.bestBid ?? last;
+        if (canSell(ctx, size)) out.push({ commodity, side: "sell", price, qty: size });
+      }
+      return out;
+    }
+    // Cold start / flat market: no trend to follow, but the book stays frozen
+    // until someone crosses the spread. Probe to keep price discovery alive,
+    // reverting toward a stable anchor so the market oscillates around it rather
+    // than drifting (a buy-biased probe inflates a commodity with no opposing
+    // pressure). Cross the spread on the side that moves price toward the anchor;
+    // only take a real resting order so the probe actually trades.
+    const anchor = params.anchor ?? 100;
+    const ref = ctx.lastPrice ?? anchor;
+    if (ref <= anchor) {
+      if (ctx.bestAsk !== null && canBuy(ctx, ctx.bestAsk, size)) {
+        out.push({ commodity, side: "buy", price: ctx.bestAsk, qty: size });
+      }
+    } else {
+      if (ctx.bestBid !== null && canSell(ctx, size)) {
+        out.push({ commodity, side: "sell", price: ctx.bestBid, qty: size });
+      }
     }
     return out;
   }
