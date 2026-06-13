@@ -7,3 +7,13 @@ dist/
 .env*.local
 .DS_Store
 *.log
+
+# Cloud-provisioning scratch (Phase 0 / Task 16 — IAM docs + Lambda zip)
+trust-lambda.json
+dsql-policy.json
+trust-scheduler.json
+invoke-policy.json
+function.zip
+out.json
+VERCEL-ENV-CHECKLIST.md
+.orbis-vercel-key.json
