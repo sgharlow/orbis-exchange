@@ -13,6 +13,7 @@ import {
 import { legendColor } from "@/lib/world-view";
 
 const POLL_MS = 2500;
+const DEPTH_LEVELS = 9; // best N price levels rendered per side
 
 function friendly(code: string): string {
   switch (code) {
@@ -207,13 +208,16 @@ export function MarketPanel({
 
       <div className="book">
         <div className="book-side asks">
-          {[...asks.rows].reverse().map((r, i) => (
-            <div className="book-row" key={`a${i}`}>
-              <span className="depth depth-ask" style={{ width: `${(r.cum / asks.max) * 100}%` }} />
-              <span className="book-price ask">{formatCredits(r.price)}</span>
-              <span className="book-qty">{r.qty}</span>
-            </div>
-          ))}
+          {(() => {
+            const askMax = asks.rows[Math.min(DEPTH_LEVELS, asks.rows.length) - 1]?.cum ?? 1;
+            return [...asks.rows.slice(0, DEPTH_LEVELS)].reverse().map((r, i) => (
+              <div className="book-row" key={`a${i}`}>
+                <span className="depth depth-ask" style={{ width: `${(r.cum / (askMax || 1)) * 100}%` }} />
+                <span className="book-price ask">{formatCredits(r.price)}</span>
+                <span className="book-qty">{r.qty}</span>
+              </div>
+            ));
+          })()}
           {asks.rows.length === 0 && <div className="book-empty">no asks</div>}
         </div>
         <div className="book-spread">
@@ -221,13 +225,16 @@ export function MarketPanel({
           <span className="book-spread-val">{sp === null ? "—" : formatCredits(sp)}</span>
         </div>
         <div className="book-side bids">
-          {bids.rows.map((r, i) => (
-            <div className="book-row" key={`b${i}`}>
-              <span className="depth depth-bid" style={{ width: `${(r.cum / bids.max) * 100}%` }} />
-              <span className="book-price bid">{formatCredits(r.price)}</span>
-              <span className="book-qty">{r.qty}</span>
-            </div>
-          ))}
+          {(() => {
+            const bidMax = bids.rows[Math.min(DEPTH_LEVELS, bids.rows.length) - 1]?.cum ?? 1;
+            return bids.rows.slice(0, DEPTH_LEVELS).map((r, i) => (
+              <div className="book-row" key={`b${i}`}>
+                <span className="depth depth-bid" style={{ width: `${(r.cum / (bidMax || 1)) * 100}%` }} />
+                <span className="book-price bid">{formatCredits(r.price)}</span>
+                <span className="book-qty">{r.qty}</span>
+              </div>
+            ));
+          })()}
           {bids.rows.length === 0 && <div className="book-empty">no bids</div>}
         </div>
       </div>
