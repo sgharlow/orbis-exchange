@@ -56,6 +56,18 @@ Legend: ✅ done · 🟡 partial · 🔴 missing · ⚪ stretch.
 
 ## Roadmap (prioritized, dated)
 
+### P0 (correctness) — AI market never trades (cold-start deadlock) — **NOT FIXED**
+
+Found 2026-06-12 dogfood: the AI bots place orders but **never trade** (1 trade
+ever in the DB, and that one was the guide script). Makers post a non-crossing
+spread; momentum/value/arb are gated on a trade tape only a trade can create →
+permanent freeze, runaway `scout`. The submission's "machines trade against you"
+thesis is hollow in a bot-only/idle world. Engine is correct — fix is in agent
+behaviour, **not** `market.ts`. Full evidence + fix options + recommendation:
+**`docs/known-issue-ai-market-cold-start.md`**. Decide the fix (recommended:
+cold-start fallback on the takers) before recording the demo; ideally before the
+cloud dogfood so the deployed world looks alive.
+
 ### P0 — Cloud spine (target **June 14**; user-gated AWS/Vercel mutations)
 
 Runbook: `docs/superpowers/runbooks/phase-0-cloud-provisioning.md` (see #6).
