@@ -21,6 +21,7 @@ opponent on one net-worth leaderboard.
 - 🚀 **[Devpost submission](docs/devpost-submission.md)** — write-up + checklist.
 - 🎬 **[Demo video script & shot-list](docs/demo-video-script.md)** — recording-ready.
 - 🗺 **[Roadmap & spec QA](docs/roadmap.md)** — spec-vs-state gaps, prioritized.
+- ✅ **[Submission status & next steps](docs/SUBMISSION-STATUS.md)** — what's done, what's left to submit.
 
 ## How it works
 
