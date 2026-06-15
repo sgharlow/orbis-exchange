@@ -55,8 +55,8 @@ market on the right are visibly the same ledger seen two ways.
   CA in memory, mines owned cells, matches + settles crossing orders, and
   **persists only deltas**. In the cloud this is a scheduled invocation.
 - **Monorepo:** pnpm workspaces (`apps/web`, `apps/worker`, `packages/db`),
-  TypeScript end to end, ~90 tests (CA rules, settlement, matching, mining,
-  claims, agents, SSE), all green.
+  TypeScript end to end, 120+ tests (CA rules, settlement, matching, mining,
+  claims, agents, SSE, single-flight scheduling), all green.
 
 ## Challenges we ran into
 

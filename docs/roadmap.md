@@ -9,6 +9,17 @@
 > tasks 1–11 ✅ done; Part B cloud/ship remains). Deadline
 > **2026-06-29 5:00pm PDT** — **18 days out**.
 
+> **Update 2026-06-14 — cloud spine is LIVE (the "Status summary" below is from
+> the 6-12 pass and now understates progress).** Provisioned + live-verified
+> 2026-06-14: Aurora DSQL cluster `wrt3a5l222hyt257qm7qz4peqa` (us-east-1,
+> **ACTIVE**, deletion-protection on, migrated 0001–0004 + seeded) · worker
+> Lambda `orbis-tick` deployed (**Active**, nodejs22, **unscheduled by design →
+> $0**) · AWS Budgets `orbis-monthly` $10/mo alert. `pnpm -r test` = **123**
+> green at last full run (db 52 + web 27 + worker 44). **Remaining (all
+> user/interactive):** `apps/web` Vercel deploy (key + env staged) · Vercel
+> spend cap · create the EventBridge `rate(1 minute)` schedule when demoing ·
+> multi-region capture · demo video · Devpost submit.
+
 ## Status summary
 
 Phases 0–3 of spec §13 are **feature-complete locally**: the living world (CA

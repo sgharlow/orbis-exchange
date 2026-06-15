@@ -17,3 +17,5 @@ function.zip
 out.json
 VERCEL-ENV-CHECKLIST.md
 .orbis-vercel-key.json
+
+.vercel
