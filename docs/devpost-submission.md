@@ -39,6 +39,33 @@ Orbis Exchange is a persistent, single-world economic simulation.
 The screen is one world, two panels: the evolving map on the left and the moving
 market on the right are visibly the same ledger seen two ways.
 
+## Who it's for — and why the pattern ships
+
+The game is the demo. The thing under it is a **reference implementation of a
+correctness-critical settlement ledger on Aurora DSQL** — and that's the part
+that's actually useful to real people.
+
+Any team that has ever written "balance can't go negative" or "don't sell the
+same seat twice" has fought this exact problem, usually with a row lock, a queue,
+or a nightly reconciliation job that pages someone at 3am when it disagrees with
+itself. Orbis shows the alternative: let a strongly-consistent, FK-less,
+multi-region database own the invariant, settle in one short conditional-write
+transaction, and the whole reconciliation category disappears.
+
+Drop the resource-world theme and the same engine is the spine of:
+
+- **Event ticketing** — N seats, never N+1 sold, even under a stampede.
+- **Limited-inventory drops / flash sales** — oversell is impossible by
+  construction, not by hoping the lock held.
+- **Payments & marketplace escrow** — debit-buyer / credit-seller as one atomic
+  fact, no double-spend, no money invented or lost.
+- **In-game / virtual economies** — exactly what's modeled here, runnable at
+  global scale on day one.
+
+So the real "who": the engineer who needs a ledger that's right under concurrency
+and across regions, and would rather prove it with an invariant than babysit a
+reconciliation pass. Orbis is that proof you can click on.
+
 ## How we built it
 
 - **Database (the hero): Amazon Aurora DSQL** — PostgreSQL-compatible, accessed
@@ -60,15 +87,47 @@ market on the right are visibly the same ledger seen two ways.
 
 ## Challenges we ran into
 
-- **DSQL is optimistic, not pessimistic.** No `SELECT … FOR UPDATE`, so we
-  enforce every invariant with conditional UPDATEs whose row count reveals a
-  conflict, and let the matching loop re-read and retry. It's a cleaner model
-  once you stop fighting it.
-- **Persisting a living grid cheaply.** Writing 4,096 cells every tick would be
-  ruinous, so the CA runs in memory and we persist only the cells that changed —
-  the single most important cost decision in the build.
+These are the three that actually cost us time — the ones where DSQL made us
+unlearn a Postgres habit.
+
+- **DSQL is optimistic, not pessimistic — so the lock I reached for doesn't
+  exist.** My instinct on the settlement transaction was `SELECT … FOR UPDATE`
+  the buyer's row, check the balance, debit. DSQL has no `FOR UPDATE`. The fix
+  was better than the habit: assert the invariant *in the write itself* —
+  `UPDATE players SET credits = credits - :cost WHERE credits >= :cost` — and
+  read the affected-row count. Zero rows means someone else moved first; the
+  matching loop re-reads and retries once. The database, not my application code,
+  is now the thing guaranteeing nobody double-spends.
+- **The migration runner had to be rewritten around DSQL's DDL rules.** DSQL
+  allows exactly **one DDL statement per transaction**, and DDL and DML can't
+  share a transaction at all. Our first migration runner (one atomic
+  transaction, the Postgres way) just failed against the cluster. So the runner
+  is now mode-aware: on DSQL it runs each statement as its own auto-commit and
+  records `_migrations` separately; on local Postgres it stays atomic. Same
+  migrations, two execution strategies.
+- **A "living grid" tried to write 4,096 rows a tick — until DSQL's row limit
+  stopped it.** The CA already runs in memory and persists only changed cells,
+  but a busy early generation can still change a few thousand at once, and a
+  single DSQL transaction has a bounded row count. We hit it. The fix
+  (`fix(db): chunk persistTick cell writes to respect Aurora DSQL row limit`) was
+  to chunk the delta persist into transaction-sized batches — keeping the
+  "deltas only, never the full grid" rule while staying inside DSQL's envelope.
+- **The bots placed orders but never traded — and it nearly shipped.** During a
+  local dogfood (gen ~837, two-day-old world) the leaderboard had one bot,
+  `scout`, runaway at ~122M net worth while *every other bot sat at exactly its
+  1,500,000 starting credits* — they had never made a single trade. Root cause: a
+  circular dependency. The momentum/value/arb agents each key off the recent
+  trade tape, but only a trade writes the tape, so it never bootstrapped — and at
+  equilibrium it could re-freeze. The matching engine and settlement transaction
+  were correct the whole time; the bug was in agent behavior. We added an
+  anchor-reverting cold-start probe to momentum (cross the spread toward a stable
+  anchor when there's no trend) and gave every commodity a full maker+momentum+
+  value ecology. All four commodities now trade every generation, bounded near
+  the anchor, no runaway. We caught it because "the machines trade against you"
+  is the whole pitch — a frozen book would have hollowed out the demo.
 - **Realtime without sockets.** Vercel won't hold long-lived connections, so we
-  push changes (not full snapshots) over SSE and reconcile deltas on the client.
+  push changes (not full snapshots) over SSE and reconcile deltas on the client,
+  with a short-poll fallback.
 
 ## Accomplishments we're proud of
 
@@ -79,16 +138,21 @@ and human orders crossing on the same book — and a world that's genuinely
 
 ## What we learned
 
-Letting the database own the invariant collapses a whole category of
-application-level complexity (no reconciliation, no distributed-lock dance), and
-that "global scale" reads far more credibly as a consistency story than as a
-benchmark.
+The biggest one is a reframe: we stopped trying to *prove* global scale with a
+load-test graph and started *guaranteeing* it with an invariant. Once the
+database owns "no double-spend, no oversell," a whole category of code we'd have
+written by reflex — distributed locks, a reconciliation pass, the bookkeeping
+that double-checks the bookkeeping — simply never got written. "Global scale"
+turned out to read far more credibly as a consistency story (one correct ledger,
+reachable from any region) than as a benchmark.
 
 ## What's next
 
-Investment/extraction upgrades and arbitrage agents, the multi-region cluster lit
-up for the headline demo, and a Bedrock "analyst" agent that narrates its
-reasoning — kept off the critical path for cost.
+Investment/extraction upgrades and arbitrage agents; lighting up DSQL's
+active-active multi-region path with a live peered region (the architecture is
+built for it — today's deploy is single-region by choice, for cost); and a
+Bedrock "analyst" agent that narrates its reasoning, kept deliberately off the
+critical settlement path.
 
 ## Built with
 
@@ -107,8 +171,11 @@ reasoning — kept off the critical path for cost.
 - [ ] **Published Vercel project link + Vercel Team ID.** *(after deploy)*
 - [ ] **Storage screenshots** proving Aurora DSQL usage (cluster + connection
       config). *(after cloud provisioning — see `docs/superpowers/runbooks/phase-0-cloud-provisioning.md`)*
-- [ ] Optional: build write-up published with the event hashtag + required
-      attribution.
+- [ ] **Bonus (+up to 0.6 on Stage-2 score):** publish the build write-up
+      **before June 29** with `#H0Hackathon` + required attribution. **Draft ready
+      at [`blog-post.md`](blog-post.md)** — paste into Dev.to / Medium / your blog,
+      confirm the attribution wording against the Official Rules, then add the live
+      URL here. This is nearly-free points; don't skip it.
 
 > Status at draft time: the game is feature-complete and tested locally
 > (world + market + settlement + AI agents + scheduler + SSE + claims/mining).
