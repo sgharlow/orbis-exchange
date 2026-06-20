@@ -104,6 +104,44 @@ describe("runAgents", () => {
     expect(owned.rows).toEqual([{ id: "11" }]); // density 88 is the best
   });
 
+  it("a scout sells its surplus inventory and realizes value (Design B)", async () => {
+    await addAgent(SCOUT, "scout", "scout", { commodity: "ore", size: 1, region: "r0" });
+    // scout holds surplus ore well above its working buffer, no claimable cells
+    await pool.query("INSERT INTO inventory (player_id, commodity, qty) VALUES ($1,'ore',500)", [SCOUT]);
+    // a buyer resting a bid @100 for 12 ore — the scout's supply has a taker
+    await pool.query(
+      `INSERT INTO players (id, handle, kind, credits, home_region, created_at)
+         VALUES ($1,'buyer','human',1000000,'us-east', now())`,
+      [SELLER]
+    );
+    await pool.query(
+      `INSERT INTO orders (id, player_id, commodity, side, price, qty_open, status, created_at)
+         VALUES (gen_random_uuid(), $1, 'ore', 'buy', 100, 12, 'open', now())`,
+      [SELLER]
+    );
+    await pool.query(
+      "INSERT INTO market_state (commodity, last_price, best_bid, best_ask, generation) VALUES ('ore',100,100,NULL,0)"
+    );
+
+    const before = Number(
+      (await pool.query("SELECT credits FROM players WHERE id=$1", [SCOUT])).rows[0].credits
+    );
+    const res = await runAgents(pool);
+
+    // it posted a sell that filled against the resting bid (value realized on the ledger)
+    expect(res.placed).toBeGreaterThanOrEqual(1);
+    expect(res.fills).toBeGreaterThan(0);
+    const qty = Number(
+      (await pool.query("SELECT qty FROM inventory WHERE player_id=$1 AND commodity='ore'", [SCOUT]))
+        .rows[0].qty
+    );
+    expect(qty).toBeLessThan(500); // surplus inventory came down
+    const after = Number(
+      (await pool.query("SELECT credits FROM players WHERE id=$1", [SCOUT])).rows[0].credits
+    );
+    expect(after).toBeGreaterThan(before); // credits realized
+  });
+
   it("an arb agent buys the commodity trading below its mean", async () => {
     // a seller resting an ore ask @95, backed by inventory
     await pool.query(

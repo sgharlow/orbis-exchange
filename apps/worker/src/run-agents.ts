@@ -27,13 +27,58 @@ export async function runAgents(pool: Pool): Promise<RunAgentsResult> {
   for (const agent of agents) {
     const params = agent.params;
 
-    // Scout: claim the best unclaimed cell in its region; the tick mines it,
-    // so the scout's net worth grows through holdings rather than trading.
+    // Scout (Design B — bounded supplier): keep a small footprint of active
+    // cells, and SELL the mined output into the market each tick. Wealth is
+    // realized through real trades on the ledger (and bounded by what the
+    // market will pay) rather than accumulating as unrealizable paper inventory.
     if (agent.strategy === "scout") {
-      const cell = await findClaimableCell(pool, params.region ?? "r0");
-      if (cell) {
-        const res = await claimCell(pool, agent.player_id, cell.id);
-        if (res.claimed) claimed++;
+      const SCOUT_CELL_CAP = 5; // small footprint → mining within organic demand
+      const SCOUT_BUFFER = 100; // keep a small working inventory
+      const SCOUT_SELL_SIZE = 12; // modest per-commodity supply per tick
+
+      const owned = (
+        await pool.query<{ n: number }>(
+          "SELECT count(*)::int AS n FROM cells WHERE owner_id = $1",
+          [agent.player_id]
+        )
+      ).rows[0].n;
+      if (owned < SCOUT_CELL_CAP) {
+        const cell = await findClaimableCell(pool, params.region ?? "r0");
+        if (cell) {
+          const res = await claimCell(pool, agent.player_id, cell.id);
+          if (res.claimed) claimed++;
+        }
+      }
+      // Sell everything above the working buffer, hitting the best bid.
+      const inv = await pool.query<{ commodity: string; qty: string }>(
+        "SELECT commodity, qty FROM inventory WHERE player_id = $1 AND qty > $2",
+        [agent.player_id, SCOUT_BUFFER]
+      );
+      for (const row of inv.rows) {
+        const m = await getMarket(pool, row.commodity);
+        // Post supply PASSIVELY at the going offer (join the best ask) instead
+        // of hitting the bid — adds liquidity and fills on real demand without
+        // crashing the price.
+        const ask = m.asks[0]
+          ? Number(m.asks[0].price)
+          : m.last_price !== null
+            ? Number(m.last_price)
+            : 100;
+        const sellQty = Math.min(Number(row.qty) - SCOUT_BUFFER, SCOUT_SELL_SIZE);
+        if (sellQty <= 0) continue;
+        try {
+          const res = await placeOrder(pool, {
+            player_id: agent.player_id,
+            commodity: row.commodity,
+            side: "sell",
+            price: ask,
+            qty: sellQty,
+          });
+          placed++;
+          fills += res.fills.reduce((sum, f) => sum + Number(f.qty), 0);
+        } catch {
+          /* skip if it can't back the sell */
+        }
       }
       continue;
     }
