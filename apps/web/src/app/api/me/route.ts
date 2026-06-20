@@ -13,7 +13,11 @@ export async function GET() {
 
   const token = (await cookies()).get("orbis_session")?.value;
   const claims = token ? verifySession(token, secret) : null;
-  if (!claims) return NextResponse.json({ error: "not_authenticated" }, { status: 401 });
+  // Anonymous visitor: 200 with a null body, not 401. /api/me is polled every
+  // few seconds by the dashboard to detect "have I joined yet?"; returning 401
+  // is a valid-but-noisy answer that the browser logs as a failed request on
+  // every poll. `null` is the honest "you're anonymous" response with no error.
+  if (!claims) return NextResponse.json(null);
 
   const pool = createPool();
   try {

@@ -14,13 +14,16 @@ export function PlayerDashboard() {
   const refresh = useCallback(async () => {
     try {
       const res = await fetch("/api/me", { cache: "no-store" });
-      if (res.status === 401) {
+      if (!res.ok) return; // transient server error — keep last state
+      // 200 with a null body = anonymous (not joined yet); an object = joined.
+      const data = (await res.json()) as PlayerState | null;
+      if (!data) {
         setJoined(false);
         setMe(null);
         return;
       }
       setJoined(true);
-      setMe((await res.json()) as PlayerState);
+      setMe(data);
     } catch {
       /* keep last state */
     }
