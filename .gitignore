@@ -19,3 +19,8 @@ VERCEL-ENV-CHECKLIST.md
 .orbis-vercel-key.json
 
 .vercel
+
+# demo video capture (local only — videos go to YouTube, not the repo)
+demo-out/
+demo-record.mjs
+demo-cards.mjs
