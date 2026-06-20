@@ -32,9 +32,10 @@ Orbis Exchange is a persistent, single-world economic simulation.
 - **Claim & mine.** Click a cell to claim it; each tick it yields its resource
   into your inventory and depletes the land, feeding scarcity back into prices.
 - **AI vs human, one ledger.** Algorithmic agents (market-maker, momentum, value,
-  scout) are first-class players that trade through the identical order path you
-  do, at zero inference cost. They keep the world liquid and alive — and they're
-  the opponent. One net-worth leaderboard ranks everyone.
+  scout, and a cross-commodity arbitrage bot) are first-class players that trade
+  through the identical order path you do, at zero inference cost. They keep the
+  world liquid and alive — and they're the opponent. One net-worth leaderboard
+  ranks everyone.
 
 The screen is one world, two panels: the evolving map on the left and the moving
 market on the right are visibly the same ledger seen two ways.
@@ -148,9 +149,9 @@ reachable from any region) than as a benchmark.
 
 ## What's next
 
-Investment/extraction upgrades and arbitrage agents; lighting up DSQL's
-active-active multi-region path with a live peered region (the architecture is
-built for it — today's deploy is single-region by choice, for cost); and a
+Lighting up DSQL's active-active multi-region path with a live peered region
+(the architecture is built for it — today's deploy is single-region by choice,
+for cost); the civic-governance layer (spec §4.6, a documented stretch); and a
 Bedrock "analyst" agent that narrates its reasoning, kept deliberately off the
 critical settlement path.
 
