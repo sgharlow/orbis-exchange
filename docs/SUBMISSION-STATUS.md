@@ -42,19 +42,14 @@ vercel deploy --prod --yes --scope steves-projects-a71becf4
 ### 2. Vercel spend cap — *if on Pro* (Hobby = N/A)
 Vercel → Project → Settings → **Spend Management** → auto-pause (~$20). AWS budget already set.
 
-### 3. Schedule the worker (turn the world ON) — AWS, ~10 min
-The world is **static** until this. EventBridge `rate(1 minute)` → `orbis-tick`. Commands staged in the root-level `trust-scheduler.json` + `invoke-policy.json` (gitignored) and plan Part B Task 16. After creating it:
-```
-aws logs tail /aws/lambda/orbis-tick --follow --region us-east-1
-```
-Expect generations strictly increasing, `skipped` only at invocation boundaries, no errors; live `/world` GEN climbs ~20/min. **Cost:** scheduled ≈ $13/mo Lambda (likely on AWS credits; the $10 budget alerts). Roll back instantly: `aws scheduler delete-schedule --name orbis-heartbeat`. Tear down after capture if conserving.
+### 3. Schedule the worker (turn the world ON) — ✅ DONE 2026-06-19
+EventBridge Scheduler **`orbis-heartbeat`** (`rate(1 minute)` → `orbis-tick`, role `orbis-scheduler`) is **ENABLED**. Live-verified: world advanced gen 64 → 87 → 99 → 123… at **~16/min** (clean, continuous). **Roll back instantly:** `aws scheduler delete-schedule --name orbis-heartbeat --region us-east-1` (and `aws iam delete-role-policy --role-name orbis-scheduler --policy-name invoke-orbis-tick; aws iam delete-role --role-name orbis-scheduler`). **Cost:** ≈ $13/mo Lambda (AWS credits; $10 budget alerts). **Tear down after capture if conserving.** Monitor: `aws logs tail /aws/lambda/orbis-tick --follow --region us-east-1`.
 
-### 3b. Re-seed the demo world for a clean leaderboard — ~5 min
-The live world still carries the **old stale seed** (16 players incl. the removed dev fixtures `alice`/`bot-maker`, 1.5M-credit era). `seed.ts` was fixed 2026-06-19 to a clean 14-agent roster (1.0M credits; the only human is whoever joins live). Since `db:seed` is idempotent (`ON CONFLICT DO NOTHING`) it won't delete the 2 old rows — either re-migrate a fresh schema then `db:seed`, or delete them directly:
-```
-DELETE FROM players WHERE id IN ('11111111-1111-1111-1111-111111111111','22222222-2222-2222-2222-222222222222');
-```
-Confirm `/api/leaderboard` returns 14 agents. Do this **before** recording.
+### 3b. Re-seed the demo world for a clean leaderboard — ✅ DONE 2026-06-19 (targeted delete)
+The 2 stale dev fixtures (`alice` human + `bot-maker` agent, the old 1.5M-era seed) were deleted directly from live DSQL — orphan-checked first (0 orders/inventory/agents/cells). **Leaderboard is now a clean 14 agents, 0 humans.** ⚠️ **Open demo-quality call:** this was a *targeted* delete — the 14 agents kept their **old accumulated credits** (most ~1.5M; **`scout-r0` is a runaway, ~5M+ and climbing** as the world ticks). For the most compelling demo, consider a **full fresh re-seed** (wipe + re-seed to gen 0, all agents at 1.0M near parity) instead — Claude can do this on request (it's destructive: resets the world). The targeted-delete state is submittable as-is; the fresh re-seed just looks better on camera.
+
+### Settlement mechanic — ✅ live-verified 2026-06-19
+Join → crossing buy on `ore` → **filled at 102**, buyer credits 10000→9898, inventory +1 ore, trade on the tape — the strongly-consistent settlement works end-to-end on live DSQL. (Test player removed afterward.)
 
 ### 4. Cloud dogfood (quality gate before footage) — ~30 min
 On the live URL: join → claim → mine → cross an order against a bot → see the fill + balance change → upgrade extraction → list a cell, buy it from a 2nd incognito handle → leaderboard moves. On a phone too. Watch: SSE behind Vercel (holds or polls?), DSQL settlement latency, auth-token refresh on a 20-min-idle tab. Fix breakage as its own tested commit. *(This is synthetic E2E — state that in any "done" claim.)*

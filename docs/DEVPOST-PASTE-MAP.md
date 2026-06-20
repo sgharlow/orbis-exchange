@@ -54,7 +54,10 @@ Paste each section from `devpost-submission.md` under the matching Devpost headi
 These are the requirements judges score directly — verify each is present:
 
 - [ ] **Text description names Amazon Aurora DSQL as the database** — covered by the "How we built it" paste (hero = Aurora DSQL).
-- [ ] **Published Vercel project link + Vercel Team ID** — get the Team ID from Vercel → Settings → General (or the URL slug `steves-projects-…`). Paste both.
+- [ ] **Published Vercel project link + Vercel Team ID** — resolved from `.vercel/project.json`:
+      - **Team ID:** `team_nP3HzRc3PNm6SaWiApTGkEWa`
+      - **Project:** `orbis-exchange` (`prj_I9OZRIFiK6FdMISgVNrIRmc06T7I`) · **Live:** https://orbis-exchange.vercel.app
+      - (Project dashboard link: Vercel → the `orbis-exchange` project; paste its URL + the Team ID above.)
 - [ ] **Architecture diagram** — `architecture.png` in the gallery (§D).
 - [ ] **Storage screenshot proving Aurora DSQL usage** — §D.
 - [ ] **Demo video link** — §C.
