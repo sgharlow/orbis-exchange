@@ -76,12 +76,9 @@ async function insertCells(pool: pg.Pool, cells: CellSeed[], batchSize = 500): P
 async function seed(): Promise<void> {
   const pool = createPool();
   try {
-    await pool.query(
-      `INSERT INTO players (id, handle, kind, credits, home_region, created_at) VALUES
-         ('11111111-1111-1111-1111-111111111111','alice','human', 10000,'us-east', now()),
-         ('22222222-2222-2222-2222-222222222222','bot-maker','agent', 10000,'us-east', now())
-       ON CONFLICT (id) DO NOTHING`
-    );
+    // The seeded world is a pure algorithmic-agent ecology (the 14 AGENTS below).
+    // No placeholder humans are seeded: the only human on the leaderboard is the
+    // live participant who joins, which is the "AI vs human on one ledger" reveal.
     for (const c of COMMODITIES) {
       await pool.query(
         `INSERT INTO market_state (commodity, last_price, best_bid, best_ask, generation)

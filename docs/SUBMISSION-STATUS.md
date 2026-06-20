@@ -3,7 +3,7 @@
 **Hackathon:** H0 "Hack the Zero Stack with Vercel and AWS Databases" · Track 3 (Million-scale Global App)
 **Deadline:** 2026-06-29 5:00pm PDT · **Submit-by target:** June 27 (2-day buffer)
 **Live app:** https://orbis-exchange.vercel.app
-**Last updated:** 2026-06-14
+**Last updated:** 2026-06-19 (QA pass — docs reconciled to live repo state; see `SUBMISSION-CHECKLIST.md` for the live-verified matrix)
 
 > This is the single source of truth for *what's done and what's left to submit*. The
 > deep roadmap/spec-coverage lives in [`roadmap.md`](roadmap.md); the credential-bearing
@@ -48,6 +48,13 @@ The world is **static** until this. EventBridge `rate(1 minute)` → `orbis-tick
 aws logs tail /aws/lambda/orbis-tick --follow --region us-east-1
 ```
 Expect generations strictly increasing, `skipped` only at invocation boundaries, no errors; live `/world` GEN climbs ~20/min. **Cost:** scheduled ≈ $13/mo Lambda (likely on AWS credits; the $10 budget alerts). Roll back instantly: `aws scheduler delete-schedule --name orbis-heartbeat`. Tear down after capture if conserving.
+
+### 3b. Re-seed the demo world for a clean leaderboard — ~5 min
+The live world still carries the **old stale seed** (16 players incl. the removed dev fixtures `alice`/`bot-maker`, 1.5M-credit era). `seed.ts` was fixed 2026-06-19 to a clean 14-agent roster (1.0M credits; the only human is whoever joins live). Since `db:seed` is idempotent (`ON CONFLICT DO NOTHING`) it won't delete the 2 old rows — either re-migrate a fresh schema then `db:seed`, or delete them directly:
+```
+DELETE FROM players WHERE id IN ('11111111-1111-1111-1111-111111111111','22222222-2222-2222-2222-222222222222');
+```
+Confirm `/api/leaderboard` returns 14 agents. Do this **before** recording.
 
 ### 4. Cloud dogfood (quality gate before footage) — ~30 min
 On the live URL: join → claim → mine → cross an order against a bot → see the fill + balance change → upgrade extraction → list a cell, buy it from a 2nd incognito handle → leaderboard moves. On a phone too. Watch: SSE behind Vercel (holds or polls?), DSQL settlement latency, auth-token refresh on a 20-min-idle tab. Fix breakage as its own tested commit. *(This is synthetic E2E — state that in any "done" claim.)*

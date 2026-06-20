@@ -6,6 +6,8 @@ same strongly-consistent ledger.** Can you out-trade the machine?
 > H0 — Hack the Zero Stack with Vercel and AWS Databases · **Track 3: Million-scale
 > Global App.** Hero database: **Amazon Aurora DSQL.** Frontend: **Next.js on Vercel.**
 
+**▶ Live:** https://orbis-exchange.vercel.app · **🎬 Demo video:** _(link added after recording)_
+
 A 64×64 resource world evolves every tick by cellular-automaton rules — regions
 bloom and collapse, so scarcity is *emergent*, never authored. One global order
 book per commodity turns that scarcity into price, and **every fill settles as one
@@ -23,6 +25,7 @@ opponent on one net-worth leaderboard.
 - 🎬 **[Demo video script & shot-list](docs/demo-video-script.md)** — recording-ready.
 - 🗺 **[Roadmap & spec QA](docs/roadmap.md)** — spec-vs-state gaps, prioritized.
 - ✅ **[Submission status & next steps](docs/SUBMISSION-STATUS.md)** — what's done, what's left to submit.
+- 🔎 **[Submission checklist](docs/SUBMISSION-CHECKLIST.md)** — live-verified requirement→evidence→gap→owner matrix.
 
 ## How it works
 
@@ -69,5 +72,6 @@ it. Tests: `pnpm -r test` (needs Docker up). Cloud (Aurora DSQL + Vercel):
 
 ## Stack
 
-Amazon Aurora DSQL · Vercel · Next.js (App Router) · React · TypeScript ·
-node-postgres · Server-Sent Events · pnpm · Vitest.
+Amazon Aurora DSQL (`@aws-sdk/dsql-signer` for IAM auth-token connect) · Vercel ·
+Next.js (App Router) · React · TypeScript · node-postgres · Server-Sent Events ·
+pnpm · Vitest.

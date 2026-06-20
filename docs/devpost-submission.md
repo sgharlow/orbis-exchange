@@ -82,7 +82,7 @@ reconciliation pass. Orbis is that proof you can click on.
   CA in memory, mines owned cells, matches + settles crossing orders, and
   **persists only deltas**. In the cloud this is a scheduled invocation.
 - **Monorepo:** pnpm workspaces (`apps/web`, `apps/worker`, `packages/db`),
-  TypeScript end to end, 120+ tests (CA rules, settlement, matching, mining,
+  TypeScript end to end, 123 tests (CA rules, settlement, matching, mining,
   claims, agents, SSE, single-flight scheduling), all green.
 
 ## Challenges we ran into
@@ -156,8 +156,8 @@ critical settlement path.
 
 ## Built with
 
-`amazon-aurora-dsql` · `vercel` · `next.js` · `react` · `typescript` ·
-`node-postgres` · `server-sent-events` · `pnpm` · `vitest`
+`amazon-aurora-dsql` · `aws-sdk-dsql-signer` · `vercel` · `next.js` · `react` ·
+`typescript` · `node-postgres` · `server-sent-events` · `pnpm` · `vitest`
 
 ---
 
@@ -168,17 +168,19 @@ critical settlement path.
 - [ ] **3–5 min demo video** — show the world evolving, a trade settling instantly,
       reveal that traders are AI, then the leaderboard + the DSQL/consistency
       walkthrough. *(record before submit)*
-- [ ] **Published Vercel project link + Vercel Team ID.** *(after deploy)*
+- [ ] **Published Vercel project link + Vercel Team ID.** *(app is deployed live at
+      https://orbis-exchange.vercel.app — paste the project link + Team ID)*
 - [ ] **Storage screenshots** proving Aurora DSQL usage (cluster + connection
-      config). *(after cloud provisioning — see `docs/superpowers/runbooks/phase-0-cloud-provisioning.md`)*
+      config). *(capture during the multi-region stand-up — see `docs/superpowers/runbooks/phase-0-cloud-provisioning.md`)*
 - [ ] **Bonus (+up to 0.6 on Stage-2 score):** publish the build write-up
       **before June 29** with `#H0Hackathon` + required attribution. **Draft ready
       at [`blog-post.md`](blog-post.md)** — paste into Dev.to / Medium / your blog,
       confirm the attribution wording against the Official Rules, then add the live
       URL here. This is nearly-free points; don't skip it.
 
-> Status at draft time: the game is feature-complete and tested locally
-> (world + market + settlement + AI agents + scheduler + SSE + claims/mining).
-> Remaining before submit are the **cloud provisioning** step (live DSQL + Vercel
-> deploy + storage screenshots) and the **demo video** — both intentionally
-> user-driven.
+> Status (updated 2026-06-19): the game is feature-complete, tested (123 green),
+> and **deployed live** at https://orbis-exchange.vercel.app on Aurora DSQL
+> (migrations 0001–0004 applied; worker Lambda deployed but unscheduled by design,
+> so the world is intentionally frozen at gen 64 until the demo). Remaining before
+> submit are all user-driven: schedule the worker, **storage screenshots**,
+> multi-region capture, and the **demo video**.

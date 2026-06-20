@@ -103,7 +103,7 @@ claim.
 - 1:38 — `Maker · Momentum · Value · Scout — same book, zero inference`
 - 2:05 — `Net worth = credits + holdings`
 - 2:28 — `Amazon Aurora DSQL — the single source of truth`
-- 3:08 — `Active-active, multi-region — one consistent world`
+- 2:42 — `Active-active, multi-region — one consistent world`
 
 ## Capture tips
 

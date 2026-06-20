@@ -19,7 +19,7 @@ Probed the deployed app at https://orbis-exchange.vercel.app (anonymous / logged
 | `GET /api/world` | ✅ 200 | `generation: 64`, `cells: 4096`, region `r0` |
 | `GET /api/market/ore` | ✅ 200 | last 100; bids 100/98/98, asks 102×; depth both sides |
 | `GET /api/market/rare` | ✅ 200 | last 102; spread 100→102; populated book |
-| `GET /api/leaderboard` | ✅ 200 | 16 players, **all `kind: agent`**; `scout-r0` leads at 2,497,812 (trading has occurred), others near 1.5M start |
+| `GET /api/leaderboard` | ✅ 200 | 16 players; `scout-r0` leads at 2,497,812 (trading has occurred). ⚠️ **stale-seed artifact** — see note 3 below |
 | `/world` UI | ✅ renders | 720×720 living-world canvas + 3 panels (LIVING WORLD / GLOBAL MARKET / LEADERBOARD AI VS HUMAN) + ORE/ENERGY/BIOMASS/RARE tabs + "ENTER THE MARKET" join CTA |
 | Full test suite `pnpm -r test` | ✅ **123 green** | db 52 · web 27 · worker 44 (re-run live this session) |
 
@@ -27,6 +27,7 @@ Probed the deployed app at https://orbis-exchange.vercel.app (anonymous / logged
 
 1. ⚠️ **The world is frozen at GEN 64.** `/api/world` returns the same generation as the 2 one-off worker invokes from 6-14 — confirming the worker is **unscheduled** (by design, $0). The UI shows "FEED ● LIVE" but no ticks advance. **This is exactly the #1 remaining step** (schedule EventBridge → `orbis-tick`). The demo video must be recorded *after* the world is turned on, or the "living world" claim won't be visible on screen.
 2. ⚠️ **Console noise, logged-out:** the client polls `GET /api/me` every ~3 s and it returns **401** until you join, logging a red console error each time. Cosmetic only (console isn't on camera; the page works). Optional polish: treat 401 as the anonymous state and skip the `console.error`. Low priority — do **not** spend cliff-time on it.
+3. ⚠️ **Stale-seed leaderboard (16 players, ~1.5M credits).** The live world was seeded from an OLD `seed.ts` (14 roster agents **+ 2 leftover dev smoke fixtures `alice`/`bot-maker`**, 1.5M starting credits). `seed.ts` is now **fixed** (2026-06-19) — the smoke fixtures are removed, so a fresh seed produces a clean **14-agent** AI roster at 1.0M credits, and the only human is whoever joins live (the "AI vs human" reveal). The fix is repo-only; the **live frozen world still shows the old 16**. **→ Re-seed the demo world before recording** (see §D step 1b) so the leaderboard matches the docs.
 
 ---
 
@@ -63,6 +64,7 @@ Probed the deployed app at https://orbis-exchange.vercel.app (anonymous / logged
 The turnkey sequence, condensed from SUBMISSION-STATUS §1–§8. Target **all of this done by June 27**.
 
 1. **Turn the world ON** — EventBridge `rate(1 minute)` → `orbis-tick` (staged in gitignored `trust-scheduler.json` / `invoke-policy.json`). Verify: `aws logs tail /aws/lambda/orbis-tick --follow` shows generations strictly increasing; live `/world` GEN climbs. Rollback: `aws scheduler delete-schedule --name orbis-heartbeat`. *(~10 min)*
+1b. **Re-seed the demo world for a clean leaderboard** *(do this BEFORE turning the world on, or before recording)* — the live world still carries the old 16-player stale seed (incl. `alice`/`bot-maker`, see §A note 3). Re-seed from the fixed `seed.ts` so the leaderboard is the clean 14-agent roster. Because `seed.ts` is idempotent (`ON CONFLICT DO NOTHING`) it will **not** remove the 2 old rows on its own — either start from a fresh schema (re-run migrations on a clean DB then `db:seed`), or delete the two stale rows directly: `DELETE FROM players WHERE id IN ('11111111-1111-1111-1111-111111111111','22222222-2222-2222-2222-222222222222');`. Confirm `/api/leaderboard` then returns 14 agents. *(~5 min)*
 2. **Cloud dogfood** (synthetic E2E) — join → claim → mine → cross an order vs a bot → see fill + balance change → upgrade extraction → list a cell, buy from a 2nd incognito handle → leaderboard moves. On a phone too. *(~30 min)*
 3. **Multi-region capture** — stand up a peered DSQL pair *only* for footage + the **storage screenshots** (req #5). Show a write in one region read from the other. Tear down after; confirm no budget surprise. *(per plan Part B Task 18)*
 4. **Record the demo video** — ≤5 min, against the live (now ticking) app, per `demo-video-script.md`. Publish public. *(req #3)*
