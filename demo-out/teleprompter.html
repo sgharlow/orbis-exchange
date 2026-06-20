@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Orbis Exchange — Narration Teleprompter</title>
+<style>
+  :root { --bg:#06080f; --panel:#0b1322; --line:#1c2740; --dim:#5f7aa6; --text:#eef3ff; --cyan:#38e0f5; --teal:#49e09a; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--text);
+    font-family:Helvetica,Arial,system-ui,sans-serif; }
+  .wrap { display:flex; height:100vh; gap:0; }
+  /* LEFT: video */
+  .left { width:46vw; min-width:380px; background:#000; display:flex; flex-direction:column;
+    border-right:1px solid var(--line); }
+  video { width:100%; flex:1; min-height:0; background:#000; object-fit:contain; }
+  .bar { display:flex; align-items:center; gap:12px; padding:10px 14px; background:var(--panel);
+    border-top:1px solid var(--line); font-variant-numeric:tabular-nums; }
+  .bar button { background:#16233d; color:var(--text); border:1px solid var(--line); border-radius:6px;
+    padding:7px 12px; font-size:13px; cursor:pointer; }
+  .bar button:hover { border-color:var(--cyan); }
+  .bar .t { font-family:ui-monospace,Consolas,monospace; color:var(--cyan); font-size:14px; }
+  .bar .hint { margin-left:auto; color:var(--dim); font-size:11px; }
+  /* RIGHT: script */
+  .right { flex:1; overflow-y:auto; padding:40vh 6vw; scroll-behavior:smooth; }
+  .seg { border-left:3px solid transparent; padding:14px 22px; margin:10px 0; cursor:pointer;
+    color:#4c5e7d; font-size:19px; line-height:1.5; transition:all .18s; }
+  .seg .meta { font-family:ui-monospace,Consolas,monospace; font-size:12px; letter-spacing:.12em;
+    text-transform:uppercase; color:#3a4a66; margin-bottom:6px; }
+  .seg.past { color:#34425e; }
+  .seg.next { color:#8fa3c4; }
+  .seg.active { color:var(--text); border-left-color:var(--cyan); font-size:30px; line-height:1.45;
+    background:linear-gradient(90deg, rgba(56,224,245,.08), transparent); }
+  .seg.active .meta { color:var(--cyan); }
+  .seg.active .now { display:inline-block; }
+  .now { display:none; color:var(--bg); background:var(--cyan); font-weight:700; border-radius:4px;
+    padding:1px 8px; margin-left:10px; font-size:13px; letter-spacing:.1em; vertical-align:middle; }
+  .prog { height:3px; background:var(--line); border-radius:3px; margin-top:12px; overflow:hidden; display:none; }
+  .seg.active .prog { display:block; }
+  .prog > i { display:block; height:100%; width:0; background:var(--cyan); }
+  .cue { color:var(--teal); font-weight:700; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="left">
+    <video id="v" src="orbis-demo-final.mp4" preload="auto" muted playsinline></video>
+    <div class="bar">
+      <button id="play">▶ Play</button>
+      <button id="restart">⟲ Restart</button>
+      <button id="slower">– speed</button>
+      <span class="t" id="speed">1.15×</span>
+      <button id="faster">+ speed</button>
+      <span class="t" id="clock">0:00 / 0:00</span>
+      <span class="hint">Space play/pause · R restart · [ ] speed · ↑↓ prev/next line · ←→ seek 5s · click a line to jump</span>
+    </div>
+  </div>
+  <div class="right" id="script"></div>
+</div>
+<script>
+// Cue times are on the FINAL video timeline (4s intro card + demo + 5s end card).
+const SEGS = [
+  { t:7,   label:"00:07 · The living world",            text:"One living world. A grid of resources that grows, spreads, and collapses on its own — no script, just rules. The abundance you see is the data, evolving in real time." },
+  { t:33,  label:"00:33 · Claim & mine",                text:"I can claim a piece of it. That cell is mine now — every few seconds it mines its resource into my inventory and depletes the land. Scarcity is emergent: where the land thins, prices are about to move." },
+  { t:50,  label:"00:50 · One global market",           text:"On the right is the other half of the same screen: one global market. One order book per commodity, price-time priority. The map and the book are the same ledger, seen two ways." },
+  { t:69,  label:"01:09 · The trade settles",           text:"Watch this. I place a buy that crosses a resting sell — and it settles instantly. One short transaction debited me, paid the seller, moved the inventory, and recorded the trade — with the balance and inventory checks asserted inside that transaction." },
+  { t:92,  label:"01:32 · The machines",                text:"Here's the twist: most of these orders aren't people. Maker, momentum, value and scout bots are first-class players — same order book, same code path I just used, zero inference cost. They keep the world alive, and they're the competition." },
+  { t:111, label:"01:51 · Leaderboard — AI vs human",   text:"One leaderboard ranks everyone — human and AI — by net worth. Which comes down to one question: can you out-trade the machine?" },
+  { t:129, label:"02:09 · Amazon Aurora DSQL",          text:"All of this rests on Amazon Aurora DSQL — the single source of truth. Strongly consistent, so no order can double-spend credits or sell the same unit twice, and there's no reconciliation pass, ever. Three runtimes share one ledger: the Next.js app on Vercel, the simulation heartbeat, and the agents." },
+  { t:147, label:"02:27 · Active-active, multi-region", text:"And DSQL is active-active across regions by design — so a player in Frankfurt and one in Virginia would trade on one consistent world, with zero coordination in our code. That's the million-scale story: not a benchmark, a guarantee." },
+  { t:160, label:"02:40 · Close (end card)",            text:"Orbis Exchange — one living world, one ledger, and a machine to beat." },
+];
+
+const v = document.getElementById('v');
+const script = document.getElementById('script');
+const clock = document.getElementById('clock');
+const playBtn = document.getElementById('play');
+const fmt = s => { s=Math.max(0,s|0); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); };
+
+// build segment nodes
+const nodes = SEGS.map((seg,i) => {
+  const el = document.createElement('div');
+  el.className = 'seg';
+  el.innerHTML = `<div class="meta">${seg.label}<span class="now">▶ READ NOW</span></div>`+
+                 `<div>${seg.text}</div><div class="prog"><i></i></div>`;
+  el.addEventListener('click', () => { v.currentTime = seg.t + 0.05; });
+  script.appendChild(el);
+  return el;
+});
+
+let activeIdx = -1;
+function render() {
+  const ct = v.currentTime;
+  let idx = -1;
+  for (let i=0;i<SEGS.length;i++){ if (ct >= SEGS[i].t - 0.001) idx = i; else break; }
+  // upcoming countdown
+  const next = SEGS[idx+1];
+  SEGS.forEach((seg,i) => {
+    const el = nodes[i];
+    el.classList.toggle('active', i===idx);
+    el.classList.toggle('past', i<idx);
+    el.classList.toggle('next', i===idx+1);
+    const meta = el.querySelector('.meta');
+    if (i===idx+1 && next) {
+      const dt = Math.ceil(next.t - ct);
+      meta.querySelector('.cue')?.remove();
+      if (dt<=8) meta.insertAdjacentHTML('beforeend', ` <span class="cue">— in ${dt}s</span>`);
+    } else { meta.querySelector('.cue')?.remove(); }
+    if (i===idx) {
+      const end = (i+1<SEGS.length)? SEGS[i+1].t : (v.duration||171);
+      const pct = Math.min(100, Math.max(0, (ct - seg.t)/(end - seg.t)*100));
+      el.querySelector('.prog > i').style.width = pct+'%';
+    }
+  });
+  if (idx !== activeIdx && idx>=0) { activeIdx=idx; nodes[idx].scrollIntoView({block:'center'}); }
+  clock.textContent = fmt(ct)+' / '+fmt(v.duration||0);
+}
+// playback speed (default +15% — the script was pacing too slow at 1.0×)
+let SPEED = 1.15;
+const speedEl = document.getElementById('speed');
+function applySpeed(){ SPEED = Math.min(2, Math.max(0.5, Math.round(SPEED*100)/100)); v.playbackRate = SPEED; speedEl.textContent = SPEED.toFixed(2)+'×'; }
+v.addEventListener('loadedmetadata', applySpeed);
+v.addEventListener('play', applySpeed);
+document.getElementById('slower').onclick = ()=>{ SPEED-=0.05; applySpeed(); };
+document.getElementById('faster').onclick = ()=>{ SPEED+=0.05; applySpeed(); };
+
+v.addEventListener('timeupdate', render);
+v.addEventListener('loadedmetadata', render);
+v.addEventListener('play',  ()=> playBtn.textContent='❚❚ Pause');
+v.addEventListener('pause', ()=> playBtn.textContent='▶ Play');
+playBtn.onclick = ()=> v.paused ? v.play() : v.pause();
+document.getElementById('restart').onclick = ()=>{ v.currentTime=0; v.play(); };
+document.addEventListener('keydown', e => {
+  if (e.code==='Space'){ e.preventDefault(); v.paused?v.play():v.pause(); }
+  else if (e.key==='r'||e.key==='R'){ v.currentTime=0; v.play(); }
+  else if (e.key===']'){ SPEED+=0.05; applySpeed(); }
+  else if (e.key==='['){ SPEED-=0.05; applySpeed(); }
+  else if (e.key==='ArrowRight'){ v.currentTime=Math.min((v.duration||171), v.currentTime+5); }
+  else if (e.key==='ArrowLeft'){ v.currentTime=Math.max(0, v.currentTime-5); }
+  else if (e.key==='ArrowDown'){ const n=SEGS.find(s=>s.t>v.currentTime+0.2); if(n) v.currentTime=n.t+0.05; }
+  else if (e.key==='ArrowUp'){ const p=[...SEGS].reverse().find(s=>s.t<v.currentTime-0.2); if(p) v.currentTime=p.t+0.05; }
+});
+render();
+</script>
+</body>
+</html>
