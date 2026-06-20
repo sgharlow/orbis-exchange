@@ -26,6 +26,7 @@ opponent on one net-worth leaderboard.
 - 🗺 **[Roadmap & spec QA](docs/roadmap.md)** — spec-vs-state gaps, prioritized.
 - ✅ **[Submission status & next steps](docs/SUBMISSION-STATUS.md)** — what's done, what's left to submit.
 - 🔎 **[Submission checklist](docs/SUBMISSION-CHECKLIST.md)** — live-verified requirement→evidence→gap→owner matrix.
+- 📋 **[Devpost paste-map](docs/DEVPOST-PASTE-MAP.md)** — every Devpost form field → exact paste source.
 
 ## How it works
 
