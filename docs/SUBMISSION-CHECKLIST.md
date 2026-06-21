@@ -51,7 +51,7 @@ Probed the deployed app at https://orbis-exchange.vercel.app (anonymous / logged
 |---|---|---|
 | Full test suite | ✅ 124 green | `pnpm -r test` re-run 2026-06-20 |
 | Live health + read path | ✅ | §A above |
-| Market liquid (books populated, agents trading) | ✅ | §A — leaderboard shows `scout-r0` at 2.49M vs 1.5M starts |
+| Market liquid (books populated, agents trading) | ✅ | §A — books populated, agents trading. ⚠️ **but** `scout-r0` re-runs ahead over a long world (gen-269 re-check: ~1.39×) — **re-seed before recording**; see [SUBMISSION-STATUS §3c](SUBMISSION-STATUS.md) |
 | MIT LICENSE, default branch `main` | ✅ | per SUBMISSION-STATUS |
 | Build / lint / Lambda bundle | ✅ (last verified 6-14) | re-run `pnpm -r lint && next build` in the pre-submit pass if any code changed since |
 
