@@ -16,7 +16,7 @@
 | Area | State | Evidence |
 |---|---|---|
 | App code (spec §3–§14, less deliberate cuts) | ✅ feature-complete on `main` | git history |
-| Test suite | ✅ **123 green** (db 52 · web 27 · worker 44) | `pnpm -r test` |
+| Test suite | ✅ **124 green** (db 52 · web 27 · worker 45) | `pnpm -r test` |
 | Lint (3 packages) · `next build` · Lambda bundle | ✅ clean | `pnpm -r lint` / `next build` / `pnpm --filter @orbis/worker bundle` |
 | **Aurora DSQL cluster** | ✅ **ACTIVE**, deletion-protected, migrated 0001–0004 + seeded | `aws dsql get-cluster` |
 | **Worker Lambda `orbis-tick`** | ✅ Active (nodejs22) — **unscheduled by design → $0** | `aws lambda get-function-configuration` |

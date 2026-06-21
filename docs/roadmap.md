@@ -3,7 +3,7 @@
 > QA pass of `orbis-exchange-spec.md` (the build contract) vs the current
 > implementation, with all remaining work prioritized into a dated roadmap.
 > Rebaselined **2026-06-12** (AI cold-start fix); **re-confirmed live 2026-06-19**:
-> `pnpm -r test` = **123 green** — db 52 + web 27 + worker 44; `pnpm -r lint`
+> `pnpm -r test` = **124 green** — db 52 + web 27 + worker 45; `pnpm -r lint`
 > clean; `next build` exit 0; Lambda
 > bundle builds + smokes. Implementation plan:
 > `docs/superpowers/plans/2026-06-11-complete-hackathon-entry.md` (Part A
@@ -15,8 +15,8 @@
 > 2026-06-14: Aurora DSQL cluster `wrt3a5l222hyt257qm7qz4peqa` (us-east-1,
 > **ACTIVE**, deletion-protection on, migrated 0001–0004 + seeded) · worker
 > Lambda `orbis-tick` deployed (**Active**, nodejs22, **unscheduled by design →
-> $0**) · AWS Budgets `orbis-monthly` $10/mo alert. `pnpm -r test` = **123**
-> green at last full run (db 52 + web 27 + worker 44). **Remaining (all
+> $0**) · AWS Budgets `orbis-monthly` $10/mo alert. `pnpm -r test` = **124**
+> green at last full run (db 52 + web 27 + worker 45). **Remaining (all
 > user/interactive):** `apps/web` Vercel deploy (key + env staged) · Vercel
 > spend cap · create the EventBridge `rate(1 minute)` schedule when demoing ·
 > multi-region capture · demo video · Devpost submit.

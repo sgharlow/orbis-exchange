@@ -39,8 +39,8 @@ Original diagnosis retained below for the record.
 > **Note on figures (2026-06-19):** the snapshot below reflects the 2026-06-12
 > buggy world — the agent starting balance was **1,500,000** then; the current
 > `seed.ts` seeds agents at **1,000,000** (`AGENT_CREDITS`). The "122 green" /
-> "44 tests" counts were the at-fix-time numbers; the full suite is **123 green**
-> now. The diagnosis and root cause are otherwise unchanged.
+> "44 tests" counts were the at-fix-time numbers; the full suite is **124 green**
+> now (worker 45). The diagnosis and root cause are otherwise unchanged.
 
 ---
 

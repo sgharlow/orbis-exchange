@@ -5,7 +5,7 @@
 **Live app:** https://orbis-exchange.vercel.app
 **This file:** a single requirement→evidence→gap→owner matrix, with **live verification run 2026-06-19**. It complements — does not replace — [`SUBMISSION-STATUS.md`](SUBMISSION-STATUS.md) (ordered remaining steps) and [`devpost-submission.md`](devpost-submission.md) (the prose answers). When they disagree, this file's "Live verification" column is the freshest signal.
 
-> **Bottom line (2026-06-19):** the read path is fully live and healthy in the cloud; all 123 tests green; the UI demo surface is complete. **Every open item is user/interactive** (schedule worker → dogfood → multi-region capture → video → Devpost form). No engineering blocker stands between today and submission.
+> **Bottom line (2026-06-19):** the read path is fully live and healthy in the cloud; all 124 tests green; the UI demo surface is complete. **Every open item is user/interactive** (schedule worker → dogfood → multi-region capture → video → Devpost form). No engineering blocker stands between today and submission.
 
 ---
 
@@ -21,7 +21,7 @@ Probed the deployed app at https://orbis-exchange.vercel.app (anonymous / logged
 | `GET /api/market/rare` | ✅ 200 | last 102; spread 100→102; populated book |
 | `GET /api/leaderboard` | ✅ 200 | 16 players; `scout-r0` leads at 2,497,812 (trading has occurred). ⚠️ **stale-seed artifact** — see note 3 below |
 | `/world` UI | ✅ renders | 720×720 living-world canvas + 3 panels (LIVING WORLD / GLOBAL MARKET / LEADERBOARD AI VS HUMAN) + ORE/ENERGY/BIOMASS/RARE tabs + "ENTER THE MARKET" join CTA |
-| Full test suite `pnpm -r test` | ✅ **123 green** | db 52 · web 27 · worker 44 (re-run live this session) |
+| Full test suite `pnpm -r test` | ✅ **124 green** | db 52 · web 27 · worker 45 (re-run live 2026-06-20) |
 
 **Two observations (neither is a submit blocker):**
 
@@ -49,7 +49,7 @@ Probed the deployed app at https://orbis-exchange.vercel.app (anonymous / logged
 
 | Gate | State | Evidence |
 |---|---|---|
-| Full test suite | ✅ 123 green | `pnpm -r test` re-run this session |
+| Full test suite | ✅ 124 green | `pnpm -r test` re-run 2026-06-20 |
 | Live health + read path | ✅ | §A above |
 | Market liquid (books populated, agents trading) | ✅ | §A — leaderboard shows `scout-r0` at 2.49M vs 1.5M starts |
 | MIT LICENSE, default branch `main` | ✅ | per SUBMISSION-STATUS |
