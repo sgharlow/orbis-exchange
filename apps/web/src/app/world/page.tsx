@@ -4,6 +4,8 @@ import { WorldView } from "@/components/WorldView";
 import { MarketPanel } from "@/components/MarketPanel";
 import { PlayerDashboard } from "@/components/PlayerDashboard";
 import { LeaderboardPanel } from "@/components/LeaderboardPanel";
+import { ObjectiveRail } from "@/components/ObjectiveRail";
+import { Coachmark } from "@/components/Coachmark";
 import "./world.css";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +30,7 @@ export default async function WorldPage() {
               region r0 · {cells.length} cells · AI and humans trading on one consistent ledger
             </p>
           </header>
+          <ObjectiveRail />
           <div className="panels">
             <section className="panel" aria-label="World">
               <h2 className="panel-h">The Living World</h2>
@@ -41,9 +44,10 @@ export default async function WorldPage() {
           </div>
           <LeaderboardPanel initial={leaderboard} />
           <footer className="world-foot">
-            density = abundance · the field and the book are the same ledger, seen two ways
+            the living field and the order book are one ledger · brightness = abundance · reveal a commodity to see its cells
           </footer>
         </div>
+        <Coachmark />
       </main>
     );
   } finally {

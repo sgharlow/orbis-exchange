@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { MarketSnapshot } from "@orbis/db";
 import {
   COMMODITIES,
@@ -13,7 +13,13 @@ import {
 import { legendColor } from "@/lib/world-view";
 
 const POLL_MS = 2500;
-const DEPTH_LEVELS = 9; // best N price levels rendered per side
+const DEPTH_LEVELS = 5; // best N price levels rendered per side (compact: keeps the trade ticket above the fold)
+
+function guestHandle(): string {
+  // A login-free per-browser identity. Math.random is fine here (display name only).
+  // 6 base-36 chars keeps collisions negligible; the player can rename anytime.
+  return "guest-" + Math.random().toString(36).slice(2, 8);
+}
 
 function friendly(code: string): string {
   switch (code) {
@@ -41,15 +47,87 @@ export function MarketPanel({
   const [market, setMarket] = useState<MarketSnapshot>(initialMarket);
   const [handle, setHandle] = useState<string | null>(null);
   const [joinName, setJoinName] = useState("");
-  const [price, setPrice] = useState(initialMarket.last_price ?? "100");
   const [qty, setQty] = useState("1");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  const [pendingSell, setPendingSell] = useState<{ commodity: Commodity; qty: number } | null>(null);
+  // Wallet snapshot from the dashboard's /api/me poll — used to bound trades so we
+  // only ever surface viable orders (no wrong-price rests, no can't-afford fails).
+  const [wallet, setWallet] = useState<{ credits: number; holdings: Record<string, number> }>({
+    credits: 0,
+    holdings: {},
+  });
+  const ticketRef = useRef<HTMLDivElement>(null);
 
+  // Sessions are login-free. The signed cookie (checked via /api/me) is the source
+  // of truth — NOT localStorage — so a dead/expired cookie can never leave the UI
+  // showing "joined" while every action 401s (the "locked" bug). If there's a valid
+  // session we rehydrate it; otherwise we clear stale local state and auto-issue a
+  // fresh guest so the player can always act.
   useEffect(() => {
-    const h = window.localStorage.getItem("orbis_handle");
-    if (h) setHandle(h);
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch("/api/me", { cache: "no-store" });
+        const me = r.ok ? ((await r.json()) as { handle: string } | null) : null;
+        if (me && !cancelled) {
+          setHandle(me.handle);
+          window.localStorage.setItem("orbis_handle", me.handle);
+          const pid = window.localStorage.getItem("orbis_player_id");
+          if (pid) window.dispatchEvent(new CustomEvent("orbis:player", { detail: pid }));
+          return;
+        }
+      } catch {
+        /* fall through to a fresh session */
+      }
+      if (cancelled) return;
+      window.localStorage.removeItem("orbis_handle");
+      window.localStorage.removeItem("orbis_player_id");
+      void join(guestHandle());
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Reveal-layer sync: when the world board reveals a commodity (or a tab is picked
+  // elsewhere), switch this panel to that commodity in lock-step.
+  useEffect(() => {
+    const onReveal = (e: Event) => {
+      const detail = (e as CustomEvent<string | null>).detail ?? null;
+      if (detail && (COMMODITIES as readonly string[]).includes(detail)) {
+        setCommodity(detail as Commodity);
+      }
+    };
+    window.addEventListener("orbis:reveal", onReveal as EventListener);
+    return () => window.removeEventListener("orbis:reveal", onReveal as EventListener);
+  }, []);
+
+  // Keep the "trading as" label in step when the player renames in the dashboard.
+  useEffect(() => {
+    const onRenamed = (e: Event) => setHandle((e as CustomEvent<string>).detail);
+    window.addEventListener("orbis:renamed", onRenamed as EventListener);
+    return () => window.removeEventListener("orbis:renamed", onRenamed as EventListener);
+  }, []);
+
+  // Track wallet (credits + holdings) from the dashboard so the trade buttons can
+  // bound quantity to what's actually executable.
+  useEffect(() => {
+    const onMe = (e: Event) => {
+      const d = (e as CustomEvent<{ credits: number; holdings: Record<string, number> }>).detail;
+      if (d) setWallet({ credits: d.credits ?? 0, holdings: d.holdings ?? {} });
+    };
+    window.addEventListener("orbis:me", onMe as EventListener);
+    return () => window.removeEventListener("orbis:me", onMe as EventListener);
+  }, []);
+
+  function chooseCommodity(c: Commodity) {
+    setCommodity(c);
+    // Drive the world board's reveal layer to match (single source of truth is the
+    // `orbis:reveal` event, consumed by WorldView).
+    window.dispatchEvent(new CustomEvent("orbis:reveal", { detail: c }));
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -89,8 +167,8 @@ export function MarketPanel({
     if (r.ok) setMarket((await r.json()) as MarketSnapshot);
   };
 
-  async function join() {
-    const name = joinName.trim();
+  async function join(nameArg?: string) {
+    const name = (nameArg ?? joinName).trim();
     if (!name) return;
     setBusy(true);
     try {
@@ -106,34 +184,62 @@ export function MarketPanel({
         window.localStorage.setItem("orbis_player_id", d.playerId);
         // let the world view learn our id so our claimed cells outline brightly
         window.dispatchEvent(new CustomEvent("orbis:player", { detail: d.playerId }));
-        setMsg({ kind: "ok", text: `joined as ${d.handle} · 10,000 credits` });
+        setMsg({ kind: "ok", text: `playing as ${d.handle} · 10,000 credits` });
       } else {
-        setMsg({ kind: "err", text: "could not join" });
+        setMsg({ kind: "err", text: "could not start a session" });
       }
     } finally {
       setBusy(false);
     }
   }
 
-  async function place(side: "buy" | "sell") {
+  // Sell-from-holdings: clicking a holding in the dashboard switches to that
+  // commodity and (once its book loads) pre-fills a crossing sell, then scrolls
+  // the ticket into view — so selling is one obvious place, not a hunt.
+  useEffect(() => {
+    const onSell = (e: Event) => {
+      const d = (e as CustomEvent<{ commodity: string; qty: number }>).detail;
+      if (!d || !(COMMODITIES as readonly string[]).includes(d.commodity)) return;
+      setCommodity(d.commodity as Commodity);
+      window.dispatchEvent(new CustomEvent("orbis:reveal", { detail: d.commodity }));
+      setPendingSell({ commodity: d.commodity as Commodity, qty: d.qty });
+    };
+    window.addEventListener("orbis:sell", onSell as EventListener);
+    return () => window.removeEventListener("orbis:sell", onSell as EventListener);
+  }, []);
+
+  useEffect(() => {
+    // Once the right commodity's book is loaded, set qty to the holding (bounded to
+    // the best bid's depth so it fills fully) and scroll to the trade buttons.
+    if (!pendingSell || market.commodity !== pendingSell.commodity) return;
+    const bidQty = market.bids[0] ? Number(market.bids[0].qty_open) : 0;
+    const q = Math.max(1, Math.min(pendingSell.qty, bidQty || pendingSell.qty));
+    setQty(String(q));
+    setMsg({ kind: "ok", text: `ready to sell ${pendingSell.commodity} — press SELL` });
+    setPendingSell(null);
+    ticketRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [pendingSell, market]);
+
+  // Market order: BUY crosses the best ask, SELL crosses the best bid. Quantity is
+  // clamped to what's executable (best-level depth, credits, holdings) so the order
+  // always fills fully — never rests, never fails. This is "only surface viable trades".
+  async function trade(side: "buy" | "sell", maxQty: number, px: number) {
     setMsg(null);
-    const p = Number(price);
-    const q = Number(qty);
-    if (!Number.isInteger(p) || p <= 0 || !Number.isInteger(q) || q <= 0) {
-      setMsg({ kind: "err", text: "enter a positive whole price and quantity" });
-      return;
-    }
+    let q = Math.floor(Number(qty));
+    if (!Number.isFinite(q) || q < 1) q = 1;
+    q = Math.min(q, maxQty);
+    if (q < 1 || px <= 0) return; // button is disabled in this case anyway
     setBusy(true);
     try {
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ commodity, side, price: p, qty: q }),
+        body: JSON.stringify({ commodity, side, price: px, qty: q }),
       });
       if (res.status === 401) {
         setHandle(null);
         window.localStorage.removeItem("orbis_handle");
-        setMsg({ kind: "err", text: "session expired — re-enter the market" });
+        setMsg({ kind: "err", text: "session expired — reload to continue" });
         return;
       }
       const data = await res.json();
@@ -144,7 +250,7 @@ export function MarketPanel({
       const filled = (data.fills ?? []).reduce((s: number, f: { qty: string }) => s + Number(f.qty), 0);
       setMsg({
         kind: "ok",
-        text: filled > 0 ? `${side} filled ${filled} — order ${data.status}` : `${side} order resting`,
+        text: `${side === "buy" ? "bought" : "sold"} ${filled} ${commodity} @ ${formatCredits(px)} cr`,
       });
       await refresh();
     } catch {
@@ -160,6 +266,17 @@ export function MarketPanel({
   const tradePrices = [...market.recent_trades].reverse().map((t) => Number(t.price));
   const chart = chartGeometry(tradePrices, 220, 84);
 
+  // Viability of the player's next market order.
+  const bestAsk = market.asks[0];
+  const bestBid = market.bids[0];
+  const askPrice = bestAsk ? Number(bestAsk.price) : 0;
+  const bidPrice = bestBid ? Number(bestBid.price) : 0;
+  const holding = wallet.holdings[commodity] ?? 0;
+  const maxBuy = askPrice > 0 ? Math.min(Number(bestAsk!.qty_open), Math.floor(wallet.credits / askPrice)) : 0;
+  const maxSell = bidPrice > 0 ? Math.min(Number(bestBid!.qty_open), holding) : 0;
+  const buyLabel = maxBuy >= 1 ? `Buy ${commodity}` : bestAsk ? "need credits" : "no offers";
+  const sellLabel = maxSell >= 1 ? `Sell ${commodity}` : holding < 1 ? `no ${commodity}` : "no buyers";
+
   return (
     <section className="market" aria-label="Market panel">
       <div className="commodity-tabs">
@@ -169,7 +286,7 @@ export function MarketPanel({
             className="commodity-tab"
             data-active={c === commodity}
             style={{ ["--hue" as string]: legendColor(c) }}
-            onClick={() => setCommodity(c)}
+            onClick={() => chooseCommodity(c)}
           >
             {c}
           </button>
@@ -239,21 +356,12 @@ export function MarketPanel({
         </div>
       </div>
 
-      <div className="ticket">
+      <div className="ticket" ref={ticketRef}>
         {handle ? (
           <>
-            <div className="ticket-inputs">
-              <label className="field">
-                <span>price</span>
-                <input
-                  inputMode="numeric"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  aria-label="price"
-                />
-              </label>
-              <label className="field">
-                <span>qty</span>
+            <div className="trade-row">
+              <label className="field qty-field">
+                <span>quantity</span>
                 <input
                   inputMode="numeric"
                   value={qty}
@@ -261,16 +369,32 @@ export function MarketPanel({
                   aria-label="quantity"
                 />
               </label>
+              <div className="trade-quote">
+                <span>buy @ <b>{bestAsk ? formatCredits(bestAsk.price) : "—"}</b></span>
+                <span>sell @ <b>{bestBid ? formatCredits(bestBid.price) : "—"}</b></span>
+              </div>
             </div>
             <div className="ticket-actions">
-              <button className="btn btn-buy" disabled={busy} onClick={() => place("buy")}>
-                Buy
+              <button
+                className="btn btn-buy"
+                disabled={busy || maxBuy < 1}
+                title={maxBuy >= 1 ? `Buy up to ${maxBuy} at ${askPrice}` : buyLabel}
+                onClick={() => trade("buy", maxBuy, askPrice)}
+              >
+                {buyLabel}
               </button>
-              <button className="btn btn-sell" disabled={busy} onClick={() => place("sell")}>
-                Sell
+              <button
+                className="btn btn-sell"
+                disabled={busy || maxSell < 1}
+                title={maxSell >= 1 ? `Sell up to ${maxSell} at ${bidPrice}` : sellLabel}
+                onClick={() => trade("sell", maxSell, bidPrice)}
+              >
+                {sellLabel}
               </button>
             </div>
-            <div className="ticket-who">trading as {handle}</div>
+            <div className="ticket-who">
+              buy up to <b>{maxBuy}</b> · sell up to <b>{maxSell}</b> · you’re {handle}
+            </div>
           </>
         ) : (
           <div className="join">
@@ -281,7 +405,7 @@ export function MarketPanel({
               onKeyDown={(e) => e.key === "Enter" && join()}
               aria-label="handle"
             />
-            <button className="btn btn-join" disabled={busy} onClick={join}>
+            <button className="btn btn-join" disabled={busy} onClick={() => join()}>
               Enter the market
             </button>
           </div>

@@ -6,6 +6,7 @@ import {
   findClaimableCell,
   persistYields,
   CLAIM_COST,
+  CELL_CAP,
   listCell,
   buyListedCell,
 } from "../src/queries.js";
@@ -56,6 +57,21 @@ describe("claimCell", () => {
 
   it("rejects an unknown cell", async () => {
     expect(await claimCell(pool, P, 999)).toEqual({ claimed: false, reason: "unknown_cell" });
+  });
+
+  it("caps a player at CELL_CAP cells; the next claim is rejected and not charged", async () => {
+    await pool.query("UPDATE players SET credits = 100000 WHERE id = $1", [P]);
+    const vals = Array.from({ length: CELL_CAP + 2 }, (_, i) => `(${100 + i},'rc',${i},5,'ore',60,NULL,0)`);
+    await pool.query(
+      `INSERT INTO cells (id, region, x, y, resource_type, density, owner_id, updated_gen) VALUES ${vals.join(",")}`
+    );
+    for (let i = 0; i < CELL_CAP; i++) {
+      expect(await claimCell(pool, P, 100 + i)).toEqual({ claimed: true });
+    }
+    const before = await credits(P);
+    expect(await claimCell(pool, P, 100 + CELL_CAP)).toEqual({ claimed: false, reason: "cell_cap" });
+    expect(await owner(100 + CELL_CAP)).toBeNull(); // rolled back — still unclaimed
+    expect(await credits(P)).toBe(before); // not charged
   });
 
   it("rejects (and does not claim) when the player can't afford it", async () => {

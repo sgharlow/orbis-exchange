@@ -19,6 +19,7 @@ export async function POST(req: Request) {
     sameSite: "lax",
     secure: true,
     path: "/",
+    maxAge: 60 * 60 * 24 * 30, // 30 days — persist across browser restarts (not a per-tab session cookie)
   });
   return res;
 }

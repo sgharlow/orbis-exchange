@@ -41,14 +41,19 @@ export async function loadRegionCells(pool: pg.Pool, region: string): Promise<Re
 // Cost in credits to claim an unclaimed cell (spec §4.4).
 export const CLAIM_COST = 500;
 
-// Claim an unclaimed cell: assert it is unowned and the player can afford it,
-// set ownership and debit credits, all in one transaction (conditional writes,
-// DSQL-safe). No double-claim, no negative balance.
+// Max cells one player may own. Without a cap a single player can claim the board
+// and snowball net worth without bound (the scout-agent runaway, but human). The
+// cap keeps the field shared and shifts the game from land-grab toward trading.
+export const CELL_CAP = 12;
+
+// Claim an unclaimed cell: assert it is unowned, the player is under the cell cap,
+// and can afford it; set ownership and debit credits, all in one transaction
+// (conditional writes, DSQL-safe). No double-claim, no over-cap, no negative balance.
 export async function claimCell(
   pool: pg.Pool,
   playerId: string,
   cellId: string | number
-): Promise<{ claimed: boolean; reason?: "taken" | "insufficient_credits" | "unknown_cell" }> {
+): Promise<{ claimed: boolean; reason?: "taken" | "insufficient_credits" | "unknown_cell" | "cell_cap" }> {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -60,6 +65,15 @@ export async function claimCell(
       const exists = await client.query("SELECT 1 FROM cells WHERE id = $1", [cellId]);
       await client.query("ROLLBACK");
       return { claimed: false, reason: (exists.rowCount ?? 0) > 0 ? "taken" : "unknown_cell" };
+    }
+    // Cap check inside the txn (the just-claimed cell is counted): reject the 13th.
+    const owned = await client.query<{ n: number }>(
+      "SELECT count(*)::int AS n FROM cells WHERE owner_id = $1",
+      [playerId]
+    );
+    if ((owned.rows[0]?.n ?? 0) > CELL_CAP) {
+      await client.query("ROLLBACK");
+      return { claimed: false, reason: "cell_cap" };
     }
     const debit = await client.query(
       "UPDATE players SET credits = credits - $1::bigint WHERE id = $2 AND credits >= $1::bigint",
@@ -184,7 +198,7 @@ export async function buyListedCell(
   pool: pg.Pool,
   buyerId: string,
   cellId: string | number
-): Promise<{ bought: boolean; reason?: "not_listed" | "own_cell" | "insufficient_credits" | "conflict"; price?: string }> {
+): Promise<{ bought: boolean; reason?: "not_listed" | "own_cell" | "insufficient_credits" | "conflict" | "cell_cap"; price?: string }> {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -201,6 +215,14 @@ export async function buyListedCell(
     if (cell.owner_id === buyerId) {
       await client.query("ROLLBACK");
       return { bought: false, reason: "own_cell" };
+    }
+    const owned = await client.query<{ n: number }>(
+      "SELECT count(*)::int AS n FROM cells WHERE owner_id = $1",
+      [buyerId]
+    );
+    if ((owned.rows[0]?.n ?? 0) >= CELL_CAP) {
+      await client.query("ROLLBACK");
+      return { bought: false, reason: "cell_cap" };
     }
     const price = cell.list_price;
     const seller = cell.owner_id!;
