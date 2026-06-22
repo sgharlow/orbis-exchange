@@ -20,7 +20,7 @@ whenever you like.
 
 ## Docs
 
-- 📖 **[How to Play (PDF)](docs/how-to-play.pdf)** — the illustrated guide.
+- 📖 **[How to Play (PDF)](docs/user-guide.pdf)** — the illustrated guide.
 - 🏗 **[Architecture](docs/architecture.md)** — diagram + the DSQL story.
 - 🚀 **[Devpost submission](docs/devpost-submission.md)** — write-up + checklist.
 - ✍️ **[Build write-up](docs/blog-post.md)** — the bonus blog post (`#H0Hackathon`).

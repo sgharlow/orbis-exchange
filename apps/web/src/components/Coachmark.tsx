@@ -9,9 +9,9 @@ import { useEffect, useState } from "react";
 const SEEN_KEY = "orbis_seen_intro";
 
 const STEPS = [
-  ["Enter the market", "Pick a handle — it's free and you start with 10,000 credits."],
-  ["Claim cells", "Click any cell in the living world. It costs 500 cr and then mines its resource every 3-second tick."],
-  ["Trade & climb", "Sell what you mine on the global order book. AI agents trade the same book — out-earn them on the net-worth leaderboard."],
+  ["You're in — no login", "Opening the link drops you in as a guest with 10,000 credits. Rename yourself to anything unique, anytime."],
+  ["Claim cells", "Click any cell in the living world (up to 12). It costs 500 cr, then mines its resource into your inventory every 3-second tick."],
+  ["Trade & climb", "Sell what you mine with one click — Buy and Sell at the market price, always a viable trade. AI agents trade the same book; out-earn them on the leaderboard."],
 ];
 
 export function Coachmark() {

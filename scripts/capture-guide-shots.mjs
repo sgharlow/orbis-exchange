@@ -111,22 +111,21 @@ const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1380, height: 960 }, deviceScaleFactor: 2 });
 page.setDefaultTimeout(20_000);
 
+// Fresh visitor: clear any prior session so the auto-join + first-visit coachmark fire.
+await page.goto(`${BASE}/world`, { waitUntil: "load" });
+await page.evaluate(() => localStorage.clear());
 await page.goto(`${BASE}/world`, { waitUntil: "load" });
 await page.waitForSelector("canvas");
-await sleep(TICK_MS + 500); // at least one live tick on screen
 
-// 02 — join (captured BEFORE joining)
-await badge(page, 1, 'input[aria-label="handle"]', "tl", -20, 0);
-await shot(page, "02-join.png", 'section[aria-label="Market"]');
+// 02 — onboarding: the first-visit "how to play" card (you're auto-joined as a guest)
+await page.waitForSelector(".coach-card", { timeout: 15_000 });
+await shot(page, "02-join.png", ".coach-card");
+await page.click(".coach-go"); // dismiss
 
-// join as "guide" — a fresh player with 10,000 credits
-await page.fill('input[aria-label="handle"]', "guide");
-await page.press('input[aria-label="handle"]', "Enter");
-await page.waitForSelector(".ticket-who", { timeout: 30_000 });
-// After joining the market panel expands (price/qty inputs get focused by the browser)
-// which auto-scrolls the page away from the canvas. Scroll back to top.
+// We're auto-joined as a guest (no login, no handle to type).
+await page.waitForSelector(".dash-handle", { timeout: 30_000 });
 await page.evaluate(() => window.scrollTo(0, 0));
-await sleep(600); // let any residual focus-driven auto-scroll finish
+await sleep(400);
 
 // pick the brightest unclaimed interior cell, claim it (retry next-best if raced)
 let claimed = null;
@@ -162,11 +161,22 @@ console.log(`claimed cell (${claimed.x},${claimed.y}) density ${claimed.density}
   const dp = await docPointOfCell(page, dark.x, dark.y);
   await badgeAt(page, 1, bp.x, bp.y);
   await badgeAt(page, 2, dp.x, dp.y);
-  await badge(page, 3, ".legend", "tl", -8, -8);
+  await badge(page, 3, ".scale-row", "tl", -8, -8);
   await shot(page, "04-world-reading.png", 'section[aria-label="World"]');
 }
 
-// mine for ~5 ticks so the dashboard shows holdings
+// Buy 1 ore now so a holding is on the dashboard immediately (mining adds more);
+// the live world is bursty, so we don't want to block on a mining tick.
+{
+  await page.click('.commodity-tab:has-text("ore")');
+  await sleep(800);
+  const buy = page.locator(".btn-buy");
+  if (await buy.isEnabled()) {
+    await buy.click();
+    await page.waitForSelector(".ticket-msg.ok", { timeout: 15_000 }).catch(() => {});
+  }
+}
+// give a few ticks so mined holdings also appear
 await sleep(TICK_MS * 5);
 
 // 05 — dashboard: credits, stats+upgrade, holdings
@@ -218,37 +228,18 @@ await badge(page, 1, ".commodity-tabs", "tl", -8, -8);
 await badge(page, 2, ".price-block", "bl", -8, 8);
 await badge(page, 3, ".chart-wrap", "tr", 8, -8);
 await badge(page, 4, ".book", "tl", -8, 0);
-await badge(page, 5, ".ticket", "tl", -8, 0);
+await badge(page, 5, ".ticket-actions", "tl", -8, 0);
 await badge(page, 6, ".tape", "bl", -8, 0);
 await shot(page, "06-market.png", 'section[aria-label="Market"]');
 
-// 07 — a real fill: sell mined yield at the best bid (fallback: buy 1 ore at ask)
+// 07 — a real fill: one-click market taker. A market BUY of ore is always viable
+// when the maker agents are quoting; wait for the button to be enabled (the wallet
+// snapshot arrives on the dashboard's poll), then take the ask.
 {
-  let placed = false;
-  // switch to the claimed cell's commodity tab
-  await page.click(`.commodity-tab:has-text("${claimed.resource_type}")`);
-  await sleep(500);
-  for (let i = 0; i < 4 && !placed; i++) {
-    const m = await (await page.request.get(`${BASE}/api/market/${claimed.resource_type}`)).json();
-    const bid = m.bids?.[0]?.price;
-    if (bid) {
-      await page.fill('input[aria-label="price"]', String(bid));
-      await page.fill('input[aria-label="quantity"]', "1");
-      await page.click(".btn-sell");
-      placed = true;
-    } else {
-      await sleep(TICK_MS); // maker quotes next round
-    }
-  }
-  if (!placed) {
-    // fallback: buy 1 ore at the ask
-    await page.click('.commodity-tab:has-text("ore")');
-    const m = await (await page.request.get(`${BASE}/api/market/ore`)).json();
-    await page.fill('input[aria-label="price"]', String(m.asks[0].price));
-    await page.fill('input[aria-label="quantity"]', "1");
-    await page.click(".btn-buy");
-  }
-  await page.waitForSelector(".ticket-msg.ok");
+  await page.click('.commodity-tab:has-text("ore")');
+  await page.waitForSelector(".btn-buy:not([disabled])", { timeout: 30_000 });
+  await page.click(".btn-buy");
+  await page.waitForSelector(".ticket-msg.ok", { timeout: 20_000 });
   // Badge 1 — below-left of .ticket-msg so it doesn't clip the fill message text
   await badge(page, 1, ".ticket-msg", "bl", -8, 24);
   // Badge 2 — above the dashboard credits, anchored to the dash-top row, left side
@@ -276,7 +267,7 @@ await shot(page, "06-market.png", 'section[aria-label="Market"]');
   await page.waitForSelector(".claim-msg.ok");
   const p = await docPointOfCell(page, claimed.x, claimed.y);
   await badgeAt(page, 1, p.x, p.y);
-  await badge(page, 2, ".legend-listed", "tl", -20, -6);
+  await badge(page, 2, ".mk-listed", "tl", -20, -6);
   await badge(page, 3, ".claim-msg", "tl", -8, -8);
   await shot(page, "09-listed-cell.png", 'section[aria-label="World"]');
 }
