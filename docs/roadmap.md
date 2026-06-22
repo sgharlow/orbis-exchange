@@ -2,8 +2,8 @@
 
 > QA pass of `orbis-exchange-spec.md` (the build contract) vs the current
 > implementation, with all remaining work prioritized into a dated roadmap.
-> Rebaselined **2026-06-12** (AI cold-start fix); **re-confirmed live 2026-06-19**:
-> `pnpm -r test` = **124 green** — db 52 + web 27 + worker 45; `pnpm -r lint`
+> Rebaselined **2026-06-12** (AI cold-start fix); **re-confirmed live 2026-06-22**:
+> `pnpm -r test` = **134 green** — db 53 + web 36 + worker 45; `pnpm -r lint`
 > clean; `next build` exit 0; Lambda
 > bundle builds + smokes. Implementation plan:
 > `docs/superpowers/plans/2026-06-11-complete-hackathon-entry.md` (Part A
@@ -31,13 +31,13 @@ agents (maker/momentum/value/scout/arb) on a 3-second heartbeat, SSE realtime,
 claim-by-click. Submission docs (README, architecture diagram SVG+PNG, Devpost
 write-up, How-to-Play PDF, video script) are drafted.
 
-**Cloud is now LIVE (updated 2026-06-19 — this supersedes the 6-12 "nothing
+**Cloud is now LIVE (updated 2026-06-22 — this supersedes the 6-12 "nothing
 provisioned" status).** Provisioned + live-verified: Aurora DSQL cluster (ACTIVE,
-migrated 0001–0004 + seeded), `apps/web` deployed to Vercel at
-https://orbis-exchange.vercel.app, worker Lambda `orbis-tick` deployed
-(unscheduled by design → $0), AWS Budgets `$10/mo` alert set. **What remains is
-all user/interactive:** create the EventBridge `rate(1 minute)` schedule when
-demoing (the world is intentionally frozen at gen 64 until then), multi-region
+migrated 0001–0004; production re-seeded clean 2026-06-22 with 14 agents),
+`apps/web` deployed to Vercel at
+https://orbis-exchange.vercel.app, worker `orbis-heartbeat`
+(`rate(1 minute)` → orbis-tick) **ENABLED — the world is advancing**, AWS Budgets
+`$10/mo` alert set. **What remains is all user/interactive:** multi-region
 capture + storage screenshots, demo video, and the Devpost submission.
 
 ## Spec coverage matrix
@@ -60,7 +60,7 @@ capture + storage screenshots, demo video, and the Devpost submission.
 | §8 | Stack + deployment | ✅ | **deployed live** — Vercel web + Aurora DSQL (migrated 0001–0004) + worker Lambda |
 | §9 | API surface | ✅ | complete incl. `world?since=` deltas (6-11) |
 | §10 | Frontend/UX | ✅ | complete incl. price chart (area fill + scale + last-dot) and mobile pass (6-11) |
-| §11 | Cost guardrails | ✅ | in-memory+delta ✅, bounded grid+3s ✅, **AWS Budgets `$10/mo` alert set**; worker unscheduled→$0 until demo; set Vercel spend cap if on Pro |
+| §11 | Cost guardrails | ✅ | in-memory+delta ✅, bounded grid+3s ✅, **AWS Budgets `$10/mo` alert set**; worker `orbis-heartbeat` now ENABLED (rate(1 min)); set Vercel spend cap if on Pro |
 | §12 | Scaling design | 🟡 | per-commodity book ✅; edge cache headers on world/market/leaderboard ✅ (6-11); single-region in practice |
 | §13 | Phases 0–4 | 🟡 | 1–3 done + **cloud deploy live**; Phase 4 ship (video + screenshots + Devpost submit) outstanding |
 | §14 | Demo + submission | 🟡 | script + diagram (SVG+PNG) ready, **app deployed live**; **video, storage screenshots, Vercel link/Team ID, submit** outstanding |
@@ -173,7 +173,7 @@ market/ledger core to save time.
 
 ## Completed (verified live 2026-06-11)
 
-- Phases 1–3 (§13) feature-complete; 104 tests green at the 6-11 snapshot (now **123** after the AI cold-start fix), lint clean.
+- Phases 1–3 (§13) feature-complete; 104 tests green at the 6-11 snapshot (now **134**), lint clean.
 - 2026-06-10 P1 game-completeness arc: investment/extraction upgrade
   (migration 0003), player dashboard (`/api/me`), leaderboard on `/world`,
   cell secondary market (migration 0004), `arb` agent.

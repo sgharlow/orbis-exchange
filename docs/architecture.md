@@ -11,7 +11,7 @@ PostgreSQL-compatible, strongly-consistent, active-active multi-region database.
 ```mermaid
 flowchart TB
   subgraph Client
-    UI["Browser — Next.js UI<br/>world view + market panel"]
+    UI["Browser — Next.js UI<br/>density-heatmap world view + taker Buy/Sell market panel"]
   end
   subgraph Vercel["Vercel — Next.js App Router"]
     RH["route handlers<br/>/api/orders · /api/claims"]
@@ -34,7 +34,10 @@ flowchart TB
    moves inventory, updates both orders, and records the trade — with the
    balance/inventory checks asserted *inside* the transaction. No double-spend,
    no oversell, no reconciliation pass. Strong consistency is what makes those
-   asserts trustworthy.
+   asserts trustworthy. (The engine is a full price-time order book; the human UI
+   meets it as a **market taker** — Buy at best ask, Sell at best bid, quantity
+   auto-bounded so orders always fill — while agents post resting liquidity. The
+   ledger and matching code path are identical for both.)
 2. **DSQL-shaped from day one.** No foreign keys (integrity is app-enforced);
    short transactions; secondary indexes created `ASYNC`; optimistic concurrency
    with conditional writes and a bounded retry instead of `SELECT … FOR UPDATE`

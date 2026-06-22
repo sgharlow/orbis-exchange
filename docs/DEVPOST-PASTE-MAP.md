@@ -47,7 +47,7 @@ Paste each section from `devpost-submission.md` under the matching Devpost headi
 |---|---|---|
 | **Architecture diagram** | `docs/architecture.png` (214 KB raster) | Devpost wants a raster; `.png` is ready. `architecture.svg` is the source. |
 | **Storage screenshot** (Aurora DSQL console — cluster + region config) | _capture during the multi-region stand-up (Step D-3 / SUBMISSION-STATUS §5)_ | **H0 hard requirement.** |
-| Gameplay screenshots (optional but recommended) | _capture from the live, ticking `/world`_ | After scheduling the worker + re-seed (clean 14-agent leaderboard). |
+| Gameplay screenshots (optional but recommended) | _capture from the live, ticking `/world`_ | Worker is scheduled (ENABLED) and the world is re-seeded clean (14-agent leaderboard); capture the cyan density heatmap + objective rail. |
 
 ## E. H0-specific custom fields (the rubric items)
 

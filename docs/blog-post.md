@@ -18,8 +18,9 @@ If I could make that *true by construction* — and make it visible, on screen, 
 
 Orbis Exchange is a single living world with one global market.
 
-- A **64×64 grid of resource cells** evolves every 3 seconds by Conway-style cellular-automaton rules. Regions bloom, spread, overcrowd, and collapse. Scarcity is *emergent* — nothing is hand-authored.
-- Every commodity has **one order book** with price-time priority. Each fill **settles as a single short, strongly-consistent transaction**: debit the buyer, credit the seller, move the inventory, close both orders, write the trade.
+- You **open the link and you're just in** — auto-joined as a guest, no login, no signup, no handle to pick (a signed per-browser cookie keeps you for ~30 days, and you can rename yourself to anything unique whenever you want).
+- A **64×64 grid of resource cells** evolves every 3 seconds by Conway-style cellular-automaton rules. Regions bloom, spread, overcrowd, and collapse. Scarcity is *emergent* — nothing is hand-authored. The field renders as a single-hue density heatmap with a bloom glow, and you can light up one commodity at a time with reveal-layer chips.
+- Every commodity has **one order book** with price-time priority. Each fill **settles as a single short, strongly-consistent transaction**: debit the buyer, credit the seller, move the inventory, close both orders, write the trade. As a human you trade as a *taker* — Buy at the best ask, Sell at the best bid, with the quantity auto-bounded to what's actually executable so an order always fills and never just sits there; the book itself is shown read-only, as the AI market-makers' liquidity.
 - **Algorithmic agents are first-class players.** Maker, momentum, value, scout — they trade through the exact same order path a human does, at zero inference cost. They keep the market liquid and they're the opponent on one net-worth leaderboard.
 
 The screen is one world, two panels: the map on the left and the order book on the right are visibly the *same ledger seen two ways*.

@@ -16,7 +16,7 @@
 | Area | State | Evidence |
 |---|---|---|
 | App code (spec §3–§14, less deliberate cuts) | ✅ feature-complete on `main` | git history |
-| Test suite | ✅ **124 green** (db 52 · web 27 · worker 45) | `pnpm -r test` |
+| Test suite | ✅ **134 green** (db 53 · web 36 · worker 45) | `pnpm -r test` |
 | Lint (3 packages) · `next build` · Lambda bundle | ✅ clean | `pnpm -r lint` / `next build` / `pnpm --filter @orbis/worker bundle` |
 | **Aurora DSQL cluster** | ✅ **ACTIVE**, deletion-protected, migrated 0001–0004 + seeded | `aws dsql get-cluster` |
 | **Worker Lambda `orbis-tick`** | ✅ Active (nodejs22) — **unscheduled by design → $0** | `aws lambda get-function-configuration` |
@@ -45,23 +45,19 @@ Vercel → Project → Settings → **Spend Management** → auto-pause (~$20). 
 ### 3. Schedule the worker (turn the world ON) — ✅ DONE 2026-06-19
 EventBridge Scheduler **`orbis-heartbeat`** (`rate(1 minute)` → `orbis-tick`, role `orbis-scheduler`) is **ENABLED**. Live-verified: world advanced gen 64 → 87 → 99 → 123… at **~16/min** (clean, continuous). **Roll back instantly:** `aws scheduler delete-schedule --name orbis-heartbeat --region us-east-1` (and `aws iam delete-role-policy --role-name orbis-scheduler --policy-name invoke-orbis-tick; aws iam delete-role --role-name orbis-scheduler`). **Cost:** ≈ $13/mo Lambda (AWS credits; $10 budget alerts). **Tear down after capture if conserving.** Monitor: `aws logs tail /aws/lambda/orbis-tick --follow --region us-east-1`.
 
-### 3c. Scout runaway — ⚠️ BOUNDED, NOT ELIMINATED (Design B / Tier 1, deployed 2026-06-20)
-The `scout-r0` net-worth runaway (claim-only → quadratic, 46× the field / billions over hours) is **greatly reduced** but **not gone**: the scout is now a **bounded supplier** (caps at 5 cells, sells its mined output passively). Worker Lambda redeployed (SHA `7oAsugyr…`) + live world re-seeded. Code: `6cb2bff`; TDD test added.
+### 3c. Scout runaway — ✅ CLOSED by a hard 12-cell cap (2026-06-22)
+The `scout-r0` net-worth runaway (claim-only → quadratic land-grab → billions over hours) is now **eliminated for all players, not merely slowed**: **each player may own at most 12 cells**, enforced race-safe inside both `claimCell` and `buyListedCell` ("cell limit reached (12)…"). Agents were already capped at 5; the new cap bounds humans too, so the unbounded snowball is closed and no reset-before-record dance is required.
 
-**Live evidence (two data points — the bound slows the runaway, it does not hold over a long run):**
-- gen **79** soak (2026-06-20): top/median ratio **1.01×**, scout rank **14/14**, cells 5, 127 open sells, prices ~100 — tight, competitive.
-- gen **269** re-check (2026-06-20-b daily-priority verification): **scout-r0 is back on top at 2,103,912 vs 2nd-place 1,511,044 (~1.39×)**; the other 13 agents still cluster at 1.48–1.51M.
+**History (now superseded):** the earlier Design B / Tier 1 approach (2026-06-20) made the scout a bounded supplier (cap 5, passive selling) which only held for ~80 gens after a re-seed — gen-269 re-checks still showed scout-r0 ~1.39× ahead. The 12-cell cap supersedes that caveat; the "greatly reduced but not gone" wording no longer applies.
 
-**Conclusion:** the earlier "1.01× / no more reset-before-record needed" claim was true only for the first ~80 generations after a re-seed; it does **not** survive a long-running world. **Action: re-seed the live world right before recording and capture within the first ~80 gens** so the leaderboard shows the intended tight AI-vs-human race. The deeper "consumption sink" fix (Tier 2, `roadmap-economy-tier2.md`) is the real cure but is out-of-scope this close to the cliff (build only with ≥3 days buffer).
-
-### 3b. Re-seed the demo world for a clean leaderboard — ✅ DONE 2026-06-19 (full fresh re-seed)
-The live world was **fully wiped and re-seeded to gen 0** (worker paused, all data tables cleared — batched DELETEs to respect DSQL's ~3000-row/txn limit; `TRUNCATE` is unsupported on DSQL — then `db:seed` against live DSQL, worker resumed). Verified fresh state: **14 agents, all at exactly 1,000,000 credits (perfect parity)**, 4096 cells, gen 0, markets at 100. Post-resume (75s): gen climbing **0→21 (~17/min)**, **138 trades** already (market alive immediately — cold-start fix working), leaderboard a **tight competitive 14-agent spread (1.50M–1.63M, no runaway)**, 0 humans (the only human is whoever joins live). The earlier scout-r0 runaway / stale-credit concern is **resolved**.
+### 3b. Re-seed the demo world for a clean leaderboard — ✅ DONE 2026-06-22 (full fresh re-seed)
+The production world was **re-seeded clean 2026-06-22**: **14 agents reset to a ~1.5M baseline**, empty field, fresh prices. Worker `orbis-heartbeat` (`rate(1 minute)` → `orbis-tick`) is ENABLED and the world is advancing. (Earlier 2026-06-19 re-seed brought agents to 1.0M parity / gen 0; this newer clean re-seed is the current live state.) With the 12-cell cap in place (§3c), the leaderboard stays a tight competitive AI-vs-human race and **no reset-before-record is needed**. The earlier scout-r0 runaway / stale-credit concern is **resolved**.
 
 ### Settlement mechanic — ✅ live-verified 2026-06-19
-Join → crossing buy on `ore` → **filled at 102**, buyer credits 10000→9898, inventory +1 ore, trade on the tape — the strongly-consistent settlement works end-to-end on live DSQL. (Test player removed afterward.)
+Join → market Buy on `ore` (taker, at the best ask, quantity auto-bounded to what's executable) → **filled at 102**, buyer credits 10000→9898, inventory +1 ore, trade on the tape — the strongly-consistent settlement works end-to-end on live DSQL. (Test player removed afterward.)
 
 ### 4. Cloud dogfood (quality gate before footage) — ~30 min
-On the live URL: join → claim → mine → cross an order against a bot → see the fill + balance change → upgrade extraction → list a cell, buy it from a 2nd incognito handle → leaderboard moves. On a phone too. Watch: SSE behind Vercel (holds or polls?), DSQL settlement latency, auth-token refresh on a 20-min-idle tab. Fix breakage as its own tested commit. *(This is synthetic E2E — state that in any "done" claim.)*
+On the live URL: open the link (auto-joins as a guest — no login/signup) → claim → mine → market Buy/Sell against the AI market-makers' liquidity (order always fills, quantity auto-bounded) → see the fill + balance change → upgrade extraction → list a cell, buy it from a 2nd incognito session → leaderboard moves. On a phone too. Watch: SSE behind Vercel (holds or polls?), DSQL settlement latency, auth-token refresh on a 20-min-idle tab. Fix breakage as its own tested commit. *(This is synthetic E2E — state that in any "done" claim.)*
 
 ### 5. Multi-region capture (brief, then tear down) — plan Part B Task 18
 Stand up a peered DSQL pair only for footage + the **storage-config screenshots** (a submission requirement). Show a write in one region read from the other. Capture, then tear down; confirm no budget surprise next day.
@@ -80,7 +76,7 @@ Description naming **Amazon Aurora DSQL**, video link, Vercel link + Team ID, ar
 ## Operational follow-ups
 
 - **Rotate the `orbis-vercel` AWS access key** — its secret was exposed in a dev session transcript (least-privilege, DSQL-connect only, but rotate as hygiene). Create a new key, update `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` in Vercel + redeploy, then delete the old key (command in `VERCEL-ENV-CHECKLIST.md`).
-- The live world sits at the generation of the last invoke until scheduled (step 3).
+- The worker `orbis-heartbeat` is ENABLED (step 3) and the world is advancing continuously.
 
 ## Out of scope (deliberate, per spec §15)
 Refine step (= identity in v1) and §16 stretch (civic voting, Bedrock analyst, futures, replay, magic-link) — build only if everything above is done with ≥3 days of buffer.

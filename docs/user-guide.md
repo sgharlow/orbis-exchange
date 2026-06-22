@@ -11,8 +11,9 @@ worth. **Can you out-trade the machine?**
 
 ![The whole game on one screen](guide/01-overview.png)
 
-**① The Living World** — the resource field, evolving every tick.
-**② The Global Market** — the order book, chart, and your trade ticket.
+**① The Living World** — the resource field, rendered as a density heatmap,
+evolving every tick.
+**② The Global Market** — the order book, chart, and your Buy/Sell buttons.
 **③ Your dashboard** — credits, cells, holdings, upgrades.
 **④ The leaderboard** — humans and machines, one ranking.
 
@@ -20,17 +21,23 @@ worth. **Can you out-trade the machine?**
 
 ## 1 · Quickstart: your first trade in five minutes
 
-1. **Enter the market.** Type a handle and press Enter. You start with
-   **10,000 credits**.
+1. **Enter the market.** Just open the link — you're **auto-joined as a guest
+   instantly**, no login, no signup, no handle to type. You start with
+   **10,000 credits**. Want a name? **Rename yourself inline** to any unique
+   handle, anytime.
 
    ![Enter the market](guide/02-join.png)
 
-2. **Read the field.** Brightness is abundance. Each color is a commodity —
-   amber **ore**, cyan **energy**, green **biomass**, violet **rare**.
+2. **Read the field.** It's a **cyan density heatmap** — brighter means more
+   abundant. The four commodities (**ore · energy · biomass · rare**) all share
+   the field; tap a **reveal-layer chip** to light up just one commodity's
+   cells, and hover any cell for an inline tooltip (coords, commodity, density,
+   the action).
 
 3. **Claim a bright cell** — click it (**500 cr**). It now mines for you: every
    tick it converts a slice of its abundance into your inventory. Your cells
-   are outlined **white**.
+   are outlined **white** — and the **"my cells" spotlight** dims everything
+   else so you can find them. (You can own up to **12 cells**.)
 
    ![A freshly claimed cell](guide/03-claim.png)
    *① your claimed cell — white outline · ② the status line confirms the claim*
@@ -38,10 +45,12 @@ worth. **Can you out-trade the machine?**
 4. **Watch your dashboard.** Within a few ticks, mined units appear in your
    holdings and your cell count is on the board.
 
-5. **Sell the yield.** Switch the market panel to your commodity, set your
-   price at (or below) the best bid, set a quantity, hit **Sell**. A crossing
-   order **settles instantly** — credits in, inventory out, one atomic
-   transaction on the ledger.
+5. **Sell the yield.** Click your commodity's holding in the dashboard to set up
+   its sale (it switches the market panel, fills the quantity, and scrolls you
+   to the buttons), then hit **Sell**. You trade as a **market taker** — Sell
+   executes at the best bid — and the quantity is **auto-bounded to what's
+   executable**, so the order **always fills fully**: credits in, inventory out,
+   one atomic transaction on the ledger. **No price to enter.**
 
    ![A fill, settled](guide/07-trade-fill.png)
    *① the fill confirmation · ② your balance moved the same moment*
@@ -53,8 +62,18 @@ That's the loop. Everything else is strategy.
 ## 2 · Reading the living world
 
 ![Reading the field](guide/04-world-reading.png)
-*① a blooming region — dense, spreading to its neighbors · ② a depleted region
-— dark cells fade toward the background · ③ the legend*
+*① a blooming region — dense and bright, spreading to its neighbors · ② a
+depleted region — dim cells fade toward the background · ③ the density scale
+(scarce → abundant) and your-cell / for-sale keys*
+
+The field is a **single-hue cyan heatmap with a bloom glow**: brightness is
+abundance, full stop. The four commodities don't each get their own colour —
+instead, **reveal-layer chips** let you light one commodity's cells at a time,
+and the **"my cells" spotlight** dims the field down to just your claimed cells.
+Hover any cell for an inline tooltip (coords, commodity, density, the action).
+An **objective rail** across the top checks off your progress — 1 Enter the
+market → 2 Click a cell to claim it → 3 Sell your goods — and a ● LIVE / ○
+PAUSED indicator tells you honestly whether the world is currently advancing.
 
 The world runs by Conway-style rules, applied every 3-second tick:
 
@@ -81,19 +100,24 @@ What this means for you:
 
 ![The market panel](guide/06-market.png)
 *① commodity tabs · ② last trade price · ③ the price chart · ④ the order book —
-asks above, bids below, the spread between · ⑤ your order ticket · ⑥ the tape —
-recent trades*
+asks above, bids below, the spread between · ⑤ your Buy / Sell buttons · ⑥ the
+tape — recent trades*
 
 - There is **one market** — one order book per commodity, shared by every
   human and every bot.
-- Orders are **limit orders**: your price, your quantity. Matching is
-  **price-time priority**.
-- A crossing trade fills **at the resting order's price** — if you sell into a
-  standing bid of 104, you get 104 even if you asked 100. Unfilled remainder
-  rests on the book until it fills or you cancel.
+- You trade as a **market taker**: **Buy** executes against the best ask,
+  **Sell** against the best bid. **There is no price field** — and no quantity
+  to second-guess either. The amount is **auto-bounded to what's actually
+  executable** (your credits, your holdings, the available depth), so your
+  orders **always fill fully and never rest or fail**.
+- A button **disables with a plain reason** when you can't act — "no ore",
+  "need credits", "no buyers" — so you always know why.
+- The order book itself is a **read-only depth display** of the AI
+  market-makers' standing liquidity — the asks and bids you're hitting.
 - Settlement is **atomic and strongly consistent**: one transaction debits the
   buyer, credits the seller, moves the inventory, and prints the trade. No
-  double-spends, no oversells — for you *and* for the bots.
+  double-spends, no oversells — for you *and* for the bots. (Under the hood the
+  matching engine is a real price-time order book; you just meet it as a taker.)
 
 The chart is the last hour of story: the area is price history, the dot is the
 last trade, the scale shows the high and low of the window.
@@ -113,6 +137,10 @@ per tick, and the cell loses the same amount — extraction is depletion.
 1.5×, level 2 → 2×, …). The next level costs **(level + 1) × 1,000 cr** —
 1,000, then 2,000, then 3,000. More yield, faster depletion: an upgraded miner
 strips a region quicker, so pair upgrades with a plan to move on.
+
+**Mind the cap.** You can own at most **12 cells**. Try to claim a 13th and the
+game tells you "cell limit reached (12) — sell or list a cell before claiming
+another." (The bots are held to a tighter cap of 5.)
 
 **The land market.** Cells themselves are assets:
 
@@ -167,15 +195,17 @@ runs through the same ledger.
 
 | Thing | Value |
 |---|---|
+| Joining | auto-join as guest, no login — rename inline anytime |
 | Starting credits | 10,000 cr |
 | Claim an unclaimed cell | 500 cr |
+| Cell cap | 12 cells per player (bots: 5) |
 | Extraction upgrade | (level + 1) × 1,000 cr — escalating |
 | Mining yield per tick | floor(density × 10% × (1 + 0.5 × level)) |
 | Depletion | equal to the yield — extraction is depletion |
 | World tick | every 3 seconds |
-| Commodities | ore · energy · biomass · rare |
-| Order type | limit (price × quantity) |
-| Fill price | the resting order's price |
+| Commodities | ore · energy · biomass · rare (one cyan heatmap; reveal-layer chips) |
+| How you trade | market taker — Buy at best ask, Sell at best bid (no price field) |
+| Quantity | auto-bounded to what's executable — always fills fully |
 | Sell a cell | click your own cell → set price → list (gold outline) |
 | Net worth | credits + inventory × last price |
 

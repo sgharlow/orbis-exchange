@@ -35,9 +35,10 @@ claim.
 3. **Tabs to pre-open:** `/world` (two-panel), `/` (leaderboard),
    `docs/architecture.svg` (or the rendered diagram), and the **AWS Aurora DSQL
    console** (cluster overview + a query showing the tables) for the storage shots.
-4. **Have a handle ready** to type (e.g. `you`) and pick a **bright cell** near
-   the center to claim, and note the current **best ask** in the book so your buy
-   crosses and fills on camera.
+4. **No handle to type** — opening `/world` auto-joins you as a guest. Optionally
+   pre-pick a unique name to **rename inline** on camera. Pick a **bright cell**
+   near the center to claim; since trades are market-taker (one click, no price),
+   just confirm the book has resting asks/bids so the Buy/Sell fills on camera.
 
 ---
 
@@ -45,10 +46,10 @@ claim.
 
 | # | ~Time | Screen / action | Voiceover |
 |---|-------|-----------------|-----------|
-| 1 | 0:00–0:15 | `/world` full screen. Let the field visibly tick/animate; slow zoom-in on the grid. | "One living world. A grid of resources that grows, spreads, and collapses on its own — no script, just rules. The abundance you see *is* the data, evolving in real time." |
-| 2 | 0:15–0:35 | Hover the world; click a **bright cell** → it outlines white, the claim toast appears. | "I can claim a piece of it. That cell is mine now — every few seconds it mines its resource into my inventory and depletes the land. Scarcity is emergent: where the land thins, prices are about to move." |
-| 3 | 0:35–0:55 | Pan to the **market panel**; point at last price, the order book (red asks / green bids), the trade tape ticking. | "On the right is the other half of the same screen: one global market. One order book per commodity, price-time priority. The map and the book are the same ledger, seen two ways." |
-| 4 | 0:55–1:25 | In the ticket: type a **Buy** at/above best ask, click **Buy**. The fill toast shows; book depth drops; last price updates; a new trade appears in the tape. | "Watch this. I place a buy that crosses a resting sell — and it settles instantly. One short transaction debited me, paid the seller, moved the inventory, and recorded the trade — with the balance and inventory checks asserted *inside* that transaction." |
+| 1 | 0:00–0:15 | `/world` full screen — you're already auto-joined as a guest (no login). Let the **cyan density heatmap** visibly tick/animate; slow zoom-in on the bloom glow. | "One living world. A grid of resources that grows, spreads, and collapses on its own — no script, just rules. Brightness is abundance: the heatmap you see *is* the data, evolving in real time." |
+| 2 | 0:15–0:35 | Hover a cell (inline tooltip shows coords/commodity/density); click a **bright cell** → it outlines white, claim toast appears. Tap the **"my cells" spotlight** so the field dims to just your cell. | "No signup — I'm already in, and I can rename myself anytime. I claim a piece of it: that cell is mine now — every few seconds it mines its resource into my inventory and depletes the land. Scarcity is emergent: where the land thins, prices are about to move." |
+| 3 | 0:35–0:55 | Pan to the **market panel**; point at last price, the order book (read-only depth — red asks / green bids), the trade tape ticking. | "On the right is the other half of the same screen: one global market. One order book per commodity, price-time priority. The map and the book are the same ledger, seen two ways." |
+| 4 | 0:55–1:25 | Click a holding in the dashboard to set up the trade, then hit the **Buy** button (no price field — quantity is auto-bounded to what's executable). The fill toast shows; book depth drops; last price updates; a new trade appears in the tape. | "Watch this. One click — I take the best ask, and it settles instantly. No price to enter, no order left resting. One short transaction debited me, paid the seller, moved the inventory, and recorded the trade — with the balance and inventory checks asserted *inside* that transaction." |
 | 5 | 1:25–1:45 | Stay on the market; let agent trades tick the tape/price while you talk. | "Here's the twist: most of these orders aren't people. Maker, momentum, value and scout bots are first-class players — same order book, same code path I just used, zero inference cost. They keep the world alive, and they're the competition." |
 | 6 | 1:45–2:05 | Cut to `/` (leaderboard); scroll the ranked list (agents tagged). | "One leaderboard ranks everyone — human and AI — by net worth: credits plus holdings at last price. Which comes down to one question. Can you out-trade the machine?" |
 | 7 | 2:05–2:35 | Cut to the **AWS Aurora DSQL console**: cluster overview, then a quick query listing tables / a `players`+`trades` peek. Then cut to `docs/architecture.svg`. | "All of this rests on Amazon Aurora DSQL — the single source of truth. Strongly consistent, so no order can double-spend credits or sell the same unit twice, and there's no reconciliation pass, ever. Three runtimes share one ledger: the Next.js app on Vercel, the simulation heartbeat, and the agents." |
@@ -59,21 +60,22 @@ claim.
 ## Continuous voiceover (read straight through, ~2:50)
 
 > One living world. A grid of resources that grows, spreads, and collapses on its
-> own — no script, just rules. The abundance you see is the data, evolving in real
-> time.
+> own — no script, just rules. Brightness is abundance: the heatmap you see is the
+> data, evolving in real time.
 >
-> I can claim a piece of it. That cell is mine now — every few seconds it mines its
-> resource into my inventory and depletes the land. Scarcity is emergent: where the
-> land thins, prices are about to move.
+> No signup — I'm already in, and I can rename myself anytime. I claim a piece of it.
+> That cell is mine now — every few seconds it mines its resource into my inventory
+> and depletes the land. Scarcity is emergent: where the land thins, prices are about
+> to move.
 >
 > On the right is the other half of the same screen: one global market. One order
 > book per commodity, price-time priority. The map and the book are the same ledger,
 > seen two ways.
 >
-> Watch this. I place a buy that crosses a resting sell — and it settles instantly.
-> One short transaction debited me, paid the seller, moved the inventory, and
-> recorded the trade — with the balance and inventory checks asserted inside that
-> transaction.
+> Watch this. One click — I take the best ask, and it settles instantly. No price to
+> enter, no order left resting. One short transaction debited me, paid the seller,
+> moved the inventory, and recorded the trade — with the balance and inventory checks
+> asserted inside that transaction.
 >
 > Here's the twist: most of these orders aren't people. Maker, momentum, value and
 > scout bots are first-class players — same order book, same code path I just used,
@@ -98,7 +100,9 @@ claim.
 ## On-screen text / lower-thirds (optional but recommended)
 
 - 0:02 — `ORBIS EXCHANGE`
+- 0:08 — `No login — auto-join as a guest`
 - 0:20 — `Claim a cell → it mines for you`
+- 1:00 — `Market taker — one click, no price, always fills`
 - 1:08 — `One transaction. No double-spend. No oversell.`
 - 1:38 — `Maker · Momentum · Value · Scout — same book, zero inference`
 - 2:05 — `Net worth = credits + holdings`
@@ -109,9 +113,11 @@ claim.
 
 - The tick is every 3s — start each world shot a beat before a tick so motion is
   visible on camera.
-- For shot #4, pre-check the **best ask** and enter a buy **at or above** it so it
-  crosses and fills on the first click (agents keep asks resting). If it just rests,
-  the book has no ask above your bid — nudge the price up and retry off-camera.
+- For shot #4, just confirm the book has a resting **best ask** before you record —
+  the Buy is a single market-taker click (no price to set) and the quantity is
+  auto-bounded to what's executable, so it fills fully on the first click. If the
+  button is disabled, it shows the reason ("need credits" / "no ore") — clear it
+  off-camera before the take.
 - Keep the cursor moving deliberately; pause ~1s after each click so the toast and
   the book update are legible.
 - Storage proof (H0 requirement): in the DSQL console capture (a) the cluster

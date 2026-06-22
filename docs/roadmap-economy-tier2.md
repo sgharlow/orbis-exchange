@@ -12,8 +12,14 @@ infinite faucet and inventory counted at market price, whoever captures the
 faucet accumulates **unbounded paper wealth** — value they could never actually
 realize (selling the hoard would collapse a thin order book).
 
-`scout-r0` was the agent that did exactly this: claimed 1 cell/tick (no cap),
-mined all owned cells, never sold. Result was a **quadratic** net-worth runaway.
+`scout-r0` was the agent that did exactly this: claimed 1 cell/tick (no cap at the
+time), mined all owned cells, never sold. Result was a **quadratic** net-worth runaway.
+
+> **Update — now bounded by a 12-cell-per-player cap.** A hard **12 cells max per
+> player** is now enforced race-safe in `claimCell` + `buyListedCell`, so the
+> scout-runaway / no-cap land-grab is bounded for **all players** (agents were
+> already capped at 5). The faucet analysis below still motivates Tier 2's
+> consumption sink, but unbounded land accumulation itself is now closed.
 
 ### Evidence — three configs, identical 600/400-gen local sim
 
@@ -39,7 +45,9 @@ over an hour). New TDD test: *"a scout sells its surplus inventory and realizes 
 
 Tier 1 is a **mitigation**, not the cure: the scout still slowly out-produces a thin
 13-bot demand side, so its net worth creeps. That residual creep is the faucet-with-
-no-drain showing through.
+no-drain showing through. (The newer **12-cell-per-player cap** — see the update at
+the top — now bounds land accumulation for everyone, including human players; Tier 2
+remains the proper sink for the mined-value creep itself.)
 
 ## Tier 2 — the cure: a consumption sink
 

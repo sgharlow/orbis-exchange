@@ -14,7 +14,9 @@ book per commodity turns that scarcity into price, and **every fill settles as o
 short, strongly-consistent transaction**: no double-spend, no oversell, no
 reconciliation. Algorithmic agents are first-class players that trade the same
 book you do, at zero inference cost — they keep the world liquid and they're the
-opponent on one net-worth leaderboard.
+opponent on one net-worth leaderboard. Open the link and you're **dropped in as a
+guest instantly — no login, no signup** — then rename to anything unique inline
+whenever you like.
 
 ## Docs
 
@@ -67,9 +69,10 @@ DATABASE_URL=postgres://orbis:orbis@localhost:5434/orbis SESSION_SECRET=dev pnpm
 DATABASE_URL=postgres://orbis:orbis@localhost:5434/orbis pnpm --filter @orbis/worker dev
 ```
 
-Open **http://localhost:3000/world** — enter the market, then click a cell to claim
-it. Tests: `pnpm -r test` (needs Docker up). Cloud (Aurora DSQL + Vercel):
-`docs/superpowers/runbooks/phase-0-cloud-provisioning.md`.
+Open **http://localhost:3000** — you're auto-joined as a guest and redirected to
+`/world`; click a cell to claim it (up to 12 cells per player). Tests: `pnpm -r test`
+(needs Docker up) — **134 green** (db 53 · web 36 · worker 45). Cloud (Aurora DSQL +
+Vercel): `docs/superpowers/runbooks/phase-0-cloud-provisioning.md`.
 
 ## Stack
 
