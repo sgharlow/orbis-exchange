@@ -172,7 +172,7 @@ export function PlayerDashboard() {
           <button
             className="dash-hold"
             key={h.commodity}
-            title={`Sell your ${h.commodity} on the market`}
+            title={`Sell your ${h.commodity} now at the best bid`}
             onClick={() =>
               window.dispatchEvent(
                 new CustomEvent("orbis:sell", { detail: { commodity: h.commodity, qty: Number(h.qty) } })

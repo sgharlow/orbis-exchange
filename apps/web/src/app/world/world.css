@@ -168,6 +168,28 @@ body {
   position: relative;
   line-height: 0;
 }
+.zoom-reset {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 4;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: #cfe0ff;
+  background: rgba(8, 14, 26, 0.82);
+  border: 1px solid rgba(120, 160, 220, 0.4);
+  border-radius: 6px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+}
+.zoom-reset:hover {
+  color: #eaf2ff;
+  border-color: rgba(56, 224, 245, 0.6);
+  background: rgba(56, 224, 245, 0.12);
+}
 .cell-tip {
   position: absolute;
   transform: translate(14px, 14px);

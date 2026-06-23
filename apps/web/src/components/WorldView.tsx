@@ -37,6 +37,7 @@ export function WorldView({
   initialGeneration: number;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const wrapRef = useRef<HTMLDivElement | null>(null);
   const [generation, setGeneration] = useState(initialGeneration);
   const [live, setLive] = useState(true);
   const [paused, setPaused] = useState(false);
@@ -56,6 +57,17 @@ export function WorldView({
   const listPricesRef = useRef<(string | null)[]>([]);
   const [sel, setSel] = useState<{ idx: number; cellId: string; price: string | null } | null>(null);
   const [askPrice, setAskPrice] = useState("");
+
+  // Wheel-to-zoom view transform (CSS transform on the canvas, origin top-left). Hit
+  // testing reads getBoundingClientRect, which already reflects the transform, so
+  // claiming stays pixel-accurate at any zoom. viewRef mirrors the state so the native
+  // wheel listener (set up in the effect below) reads the current view without a stale
+  // closure; setView re-renders to apply the transform.
+  const MIN_Z = 1;
+  const MAX_Z = 9;
+  const [view, setView] = useState({ z: 1, tx: 0, ty: 0 });
+  const viewRef = useRef({ z: 1, tx: 0, ty: 0 });
+  const dragRef = useRef({ active: false, sx: 0, sy: 0, tx: 0, ty: 0, moved: false });
   const myIdRef = useRef<string | null>(null);
   const rafRef = useRef<number | null>(null);
   const redrawRef = useRef<(() => void) | null>(null);
@@ -88,6 +100,15 @@ export function WorldView({
     idsRef.current = ids;
     ownerIdsRef.current = owners;
     listPricesRef.current = prices;
+  }
+
+  // Keep the field covering the viewport: translate stays within [D*(1-z), 0] per axis.
+  function clampPan(t: number, z: number, D: number): number {
+    return Math.min(0, Math.max(D * (1 - z), t));
+  }
+  function applyView(next: { z: number; tx: number; ty: number }) {
+    viewRef.current = next;
+    setView(next);
   }
 
   useEffect(() => {
@@ -234,6 +255,29 @@ export function WorldView({
 
     draw();
 
+    // Mouse-wheel zoom, centered on the cursor so the cell under the pointer stays put
+    // while it grows — the clearest way to see which cell you're about to claim. Native
+    // listener (not React onWheel) so we can preventDefault and stop the page scrolling.
+    const onWheel = (e: WheelEvent) => {
+      const wrap = wrapRef.current;
+      if (!wrap) return;
+      e.preventDefault();
+      const r = wrap.getBoundingClientRect();
+      const D = r.width;
+      const px = e.clientX - r.left;
+      const py = e.clientY - r.top;
+      const cur = viewRef.current;
+      const nz = Math.min(MAX_Z, Math.max(MIN_Z, cur.z * Math.exp(-e.deltaY * 0.0015)));
+      // World-local point under the cursor before zoom; keep it fixed after.
+      const ux = (px - cur.tx) / cur.z;
+      const uy = (py - cur.ty) / cur.z;
+      const ntx = clampPan(px - ux * nz, nz, D);
+      const nty = clampPan(py - uy * nz, nz, D);
+      viewRef.current = { z: nz, tx: ntx, ty: nty };
+      setView(viewRef.current);
+    };
+    canvas.addEventListener("wheel", onWheel, { passive: false });
+
     let cancelled = false;
     const poll = async () => {
       try {
@@ -312,6 +356,7 @@ export function WorldView({
 
     return () => {
       cancelled = true;
+      canvas.removeEventListener("wheel", onWheel);
       clearInterval(id);
       clearInterval(pauseCheck);
       es.close();
@@ -355,10 +400,44 @@ export function WorldView({
       },
       myIdRef.current ?? (typeof window !== "undefined" ? window.localStorage.getItem("orbis_player_id") : null)
     );
-    setHover({ left: at.ox, top: at.oy, text });
+    // Position the tip at the cursor relative to the wrap (not the canvas), so it
+    // tracks correctly even when the canvas is zoomed/panned by a transform.
+    const wrect = wrapRef.current?.getBoundingClientRect();
+    setHover({ left: e.clientX - (wrect?.left ?? 0), top: e.clientY - (wrect?.top ?? 0), text });
+  }
+
+  // Drag-to-pan, only meaningful when zoomed in. A >4px move marks it as a drag so the
+  // ensuing click doesn't claim a cell. At z===1 there's nothing to pan, so a press is
+  // never treated as a drag and click-to-claim works normally.
+  function onPointerDown(e: React.MouseEvent<HTMLCanvasElement>) {
+    if (e.button !== 0 || viewRef.current.z <= 1) return;
+    const cur = viewRef.current;
+    dragRef.current = { active: true, sx: e.clientX, sy: e.clientY, tx: cur.tx, ty: cur.ty, moved: false };
+  }
+  function onCanvasMove(e: React.MouseEvent<HTMLCanvasElement>) {
+    const d = dragRef.current;
+    if (d.active) {
+      const D = wrapRef.current?.getBoundingClientRect().width ?? 0;
+      const dx = e.clientX - d.sx;
+      const dy = e.clientY - d.sy;
+      if (Math.abs(dx) + Math.abs(dy) > 4) d.moved = true;
+      const z = viewRef.current.z;
+      applyView({ z, tx: clampPan(d.tx + dx, z, D), ty: clampPan(d.ty + dy, z, D) });
+      setHover(null);
+      return;
+    }
+    handleHover(e);
+  }
+  function onPointerUp() {
+    dragRef.current.active = false;
   }
 
   async function handleClaim(e: React.MouseEvent<HTMLCanvasElement>) {
+    // A pan drag ends with a click event — don't let it claim the cell it lands on.
+    if (dragRef.current.moved) {
+      dragRef.current.moved = false;
+      return;
+    }
     const at = cellAt(e);
     if (!at) return;
     const idx = at.idx;
@@ -449,27 +528,54 @@ export function WorldView({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1rem", alignItems: "center" }}>
-      <div className="canvas-wrap">
+      <div
+        className="canvas-wrap"
+        ref={wrapRef}
+        style={{
+          width: "min(92vw, 72vh, 620px)",
+          height: "min(92vw, 72vh, 620px)",
+          overflow: "hidden",
+          borderRadius: 10,
+          background: FIELD_BG,
+          boxShadow:
+            "0 0 0 1px rgba(120,160,220,0.18), 0 0 60px rgba(40,120,200,0.15), inset 0 0 80px rgba(0,0,0,0.6)",
+        }}
+      >
         <canvas
           ref={canvasRef}
           onClick={handleClaim}
-          onMouseMove={handleHover}
-          onMouseLeave={() => setHover(null)}
-          aria-label={`Living resource field for region ${region}, ${size} by ${size} cells. Click a cell to claim it.`}
+          onMouseDown={onPointerDown}
+          onMouseMove={onCanvasMove}
+          onMouseUp={onPointerUp}
+          onMouseLeave={() => {
+            onPointerUp();
+            setHover(null);
+          }}
+          aria-label={`Living resource field for region ${region}, ${size} by ${size} cells. Click a cell to claim it. Scroll to zoom; drag to pan when zoomed in.`}
           style={{
-            width: "min(92vw, 72vh, 620px)",
-            height: "min(92vw, 72vh, 620px)",
-            borderRadius: 10,
+            width: "100%",
+            height: "100%",
+            display: "block",
             background: FIELD_BG,
-            cursor: "crosshair",
-            boxShadow:
-              "0 0 0 1px rgba(120,160,220,0.18), 0 0 60px rgba(40,120,200,0.15), inset 0 0 80px rgba(0,0,0,0.6)",
+            cursor: view.z > 1 ? (dragRef.current.active ? "grabbing" : "grab") : "crosshair",
+            transform: `translate(${view.tx}px, ${view.ty}px) scale(${view.z})`,
+            transformOrigin: "0 0",
+            willChange: "transform",
           }}
         />
         {hover && (
           <span className="cell-tip" style={{ left: hover.left, top: hover.top }}>
             {hover.text}
           </span>
+        )}
+        {view.z > 1 && (
+          <button
+            className="zoom-reset"
+            onClick={() => applyView({ z: 1, tx: 0, ty: 0 })}
+            aria-label="Reset zoom"
+          >
+            {view.z.toFixed(1)}× · reset
+          </button>
         )}
       </div>
 
@@ -531,7 +637,7 @@ export function WorldView({
         ) : claimMsg ? (
           <span className={`claim-msg ${claimMsg.kind}`}>{claimMsg.text}</span>
         ) : (
-          <span className="claim-hint">hover a cell to inspect it · click to claim — your cells mine every tick · click a cell you own to list the plot for sale</span>
+          <span className="claim-hint">hover a cell to inspect it · scroll to zoom (drag to pan) · click to claim — your cells mine every tick · click a cell you own to list the plot for sale</span>
         )}
       </div>
 

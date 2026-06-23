@@ -209,26 +209,30 @@ export function MarketPanel({
   }, []);
 
   useEffect(() => {
-    // Once the right commodity's book is loaded, set qty to the holding (bounded to
-    // the best bid's depth so it fills fully) and scroll to the trade buttons.
+    // One-click sell: once the holding's commodity book is loaded, execute the sell
+    // immediately at the best bid (bounded to its depth so it fills fully). No second
+    // click and no scroll to the ticket — the top "sell" button in the dashboard is
+    // the whole interaction.
     if (!pendingSell || market.commodity !== pendingSell.commodity) return;
-    const bidQty = market.bids[0] ? Number(market.bids[0].qty_open) : 0;
-    const q = Math.max(1, Math.min(pendingSell.qty, bidQty || pendingSell.qty));
-    setQty(String(q));
-    setMsg({ kind: "ok", text: `ready to sell ${pendingSell.commodity} — press SELL` });
+    const ps = pendingSell;
     setPendingSell(null);
-    ticketRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const bid = market.bids[0];
+    if (!bid) {
+      setMsg({ kind: "err", text: `no buyers for ${ps.commodity} right now` });
+      return;
+    }
+    const px = Number(bid.price);
+    const q = Math.max(1, Math.min(ps.qty, Number(bid.qty_open) || ps.qty));
+    void placeOrder("sell", q, px);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingSell, market]);
 
-  // Market order: BUY crosses the best ask, SELL crosses the best bid. Quantity is
-  // clamped to what's executable (best-level depth, credits, holdings) so the order
-  // always fills fully — never rests, never fails. This is "only surface viable trades".
-  async function trade(side: "buy" | "sell", maxQty: number, px: number) {
+  // The single order path. BUY crosses the best ask, SELL crosses the best bid; the
+  // caller passes an already-bounded quantity so the order always fills fully — never
+  // rests, never fails. This is "only surface viable trades".
+  async function placeOrder(side: "buy" | "sell", q: number, px: number) {
+    if (q < 1 || px <= 0) return;
     setMsg(null);
-    let q = Math.floor(Number(qty));
-    if (!Number.isFinite(q) || q < 1) q = 1;
-    q = Math.min(q, maxQty);
-    if (q < 1 || px <= 0) return; // button is disabled in this case anyway
     setBusy(true);
     try {
       const res = await fetch("/api/orders", {
@@ -253,11 +257,24 @@ export function MarketPanel({
         text: `${side === "buy" ? "bought" : "sold"} ${filled} ${commodity} @ ${formatCredits(px)} cr`,
       });
       await refresh();
+      // Nudge the dashboard (credits + holdings) to update at once, so the result of a
+      // top-of-UI one-click sell is visible immediately rather than on the next poll.
+      const pid = window.localStorage.getItem("orbis_player_id");
+      if (pid) window.dispatchEvent(new CustomEvent("orbis:player", { detail: pid }));
     } catch {
       setMsg({ kind: "err", text: "network error" });
     } finally {
       setBusy(false);
     }
+  }
+
+  // The ticket's Buy/Sell buttons read the quantity field, clamp it to what's
+  // executable (best-level depth, credits, holdings), then place the order.
+  async function trade(side: "buy" | "sell", maxQty: number, px: number) {
+    let q = Math.floor(Number(qty));
+    if (!Number.isFinite(q) || q < 1) q = 1;
+    q = Math.min(q, maxQty);
+    await placeOrder(side, q, px);
   }
 
   const asks = cumulativeDepth(market.asks);
