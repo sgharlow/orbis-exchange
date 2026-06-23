@@ -18,7 +18,8 @@ reconciliation. Algorithmic agents are first-class players that trade the same
 book you do, at zero inference cost — they keep the world liquid and they're the
 opponent on one net-worth leaderboard. Open the link and you're **dropped in as a
 guest instantly — no login, no signup** — then rename to anything unique inline
-whenever you like.
+whenever you like. **Scroll to zoom in** on the exact cell before you claim it, and
+**sell a holding in one click** straight from your dashboard.
 
 ## Docs
 
