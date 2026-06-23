@@ -5,12 +5,32 @@
 import { chromium } from "playwright";
 import { readFileSync, writeFileSync, unlinkSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { marked } from "marked";
 
+const require = createRequire(import.meta.url);
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+// sharp is hoisted under pnpm's store; resolve it explicitly.
+const sharp = require(path.join(root, "node_modules/.pnpm/sharp@0.34.5/node_modules/sharp/lib/index.js"));
+
 const md = readFileSync(path.join(root, "docs", "user-guide.md"), "utf8");
-const body = marked.parse(md);
+let body = marked.parse(md);
+
+// Inline each guide screenshot as a resized JPEG data URI. The captured PNGs are
+// 2x (deviceScaleFactor) for crisp GitHub rendering, but embedding them raw makes
+// a ~18 MB PDF; downscaling + JPEG keeps the guide a couple of MB with no visible
+// loss at the printed size. The PNGs on disk stay the source of truth.
+const imgRe = /src="(guide\/[^"]+\.png)"/g;
+const rels = [...new Set([...body.matchAll(imgRe)].map((m) => m[1]))];
+for (const rel of rels) {
+  const buf = await sharp(path.join(root, "docs", rel))
+    .resize({ width: 1280, withoutEnlargement: true })
+    .jpeg({ quality: 80, mozjpeg: true })
+    .toBuffer();
+  const uri = `data:image/jpeg;base64,${buf.toString("base64")}`;
+  body = body.split(`src="${rel}"`).join(`src="${uri}"`);
+}
 
 const html = `<!doctype html>
 <html><head><meta charset="utf-8"><title>Orbis Exchange — Player's Guide</title>
