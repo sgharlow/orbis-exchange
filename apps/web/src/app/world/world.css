@@ -163,7 +163,8 @@ body {
   text-align: center;
 }
 
-/* ---- living-field hover tooltip ---- */
+/* ---- living-field hover tooltip + zoom viewport ---- */
+/* .canvas-wrap clips the wheel-zoom transform applied to the canvas. */
 .canvas-wrap {
   position: relative;
   line-height: 0;
