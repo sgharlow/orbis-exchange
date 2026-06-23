@@ -1,9 +1,27 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { createPool, placeOrder, ensurePlayer, OrderError, type Side } from "@orbis/db";
+import { createPool, placeOrder, getOpenOrders, ensurePlayer, OrderError, type Side } from "@orbis/db";
 import { verifySession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
+
+// GET /api/orders — the signed-in player's own resting (open) orders. Anonymous
+// visitors get an empty list (not a 401) since the panel polls this.
+export async function GET() {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) return NextResponse.json({ error: "server_misconfigured" }, { status: 500 });
+
+  const token = (await cookies()).get("orbis_session")?.value;
+  const claims = token ? verifySession(token, secret) : null;
+  if (!claims) return NextResponse.json({ orders: [] });
+
+  const pool = createPool();
+  try {
+    return NextResponse.json({ orders: await getOpenOrders(pool, claims.playerId) });
+  } finally {
+    await pool.end();
+  }
+}
 
 // POST /api/orders — place a limit order as the signed-in player (spec §9).
 export async function POST(request: Request) {

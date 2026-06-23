@@ -23,6 +23,7 @@ export interface OrderResult {
   ok: boolean;
   status: number;
   filled: number;
+  avgFillPrice: number | null; // volume-weighted average of the actual fills
   error?: string;
 }
 
@@ -34,24 +35,27 @@ export async function postOrder(
   price: number,
   qty: number
 ): Promise<OrderResult> {
-  if (qty < 1 || price <= 0) return { ok: false, status: 0, filled: 0, error: "invalid_input" };
+  if (qty < 1 || price <= 0) return { ok: false, status: 0, filled: 0, avgFillPrice: null, error: "invalid_input" };
   try {
     const res = await fetch("/api/orders", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ commodity, side, price, qty }),
     });
-    let data: { fills?: { qty: string }[]; error?: string } = {};
+    let data: { fills?: { price: string; qty: string }[]; error?: string } = {};
     try {
       data = await res.json();
     } catch {
       /* empty body */
     }
-    if (!res.ok) return { ok: false, status: res.status, filled: 0, error: data.error ?? "order_failed" };
-    const filled = (data.fills ?? []).reduce((s, f) => s + Number(f.qty), 0);
-    return { ok: true, status: res.status, filled };
+    if (!res.ok) return { ok: false, status: res.status, filled: 0, avgFillPrice: null, error: data.error ?? "order_failed" };
+    const fills = data.fills ?? [];
+    const filled = fills.reduce((s, f) => s + Number(f.qty), 0);
+    const value = fills.reduce((s, f) => s + Number(f.price) * Number(f.qty), 0);
+    const avgFillPrice = filled > 0 ? Math.round(value / filled) : null;
+    return { ok: true, status: res.status, filled, avgFillPrice };
   } catch {
-    return { ok: false, status: 0, filled: 0, error: "network error" };
+    return { ok: false, status: 0, filled: 0, avgFillPrice: null, error: "network error" };
   }
 }
 

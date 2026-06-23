@@ -153,7 +153,7 @@ export function PlayerDashboard() {
         emitActivity("err", friendly(r.error ?? "order_failed"));
         return;
       }
-      emitActivity("ok", `sold ${r.filled} ${commodity} @ ${formatCredits(bid.price)} cr`);
+      emitActivity("ok", `sold ${r.filled} ${commodity} @ ${formatCredits(r.avgFillPrice ?? bid.price)} cr`);
       await refresh();
     } finally {
       setBusy(false);

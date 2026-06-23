@@ -305,6 +305,27 @@ export async function cancelOrder(pool: pg.Pool, orderId: string): Promise<{ can
   return { cancelled: await cancelById(pool, orderId) };
 }
 
+export interface OpenOrder {
+  id: string;
+  commodity: string;
+  side: Side;
+  price: string;
+  qty_open: string;
+}
+
+// A player's own resting (open, partially-fillable) orders — for the "your open
+// orders" list with cancel. Money columns travel as strings (BIGINT convention).
+export async function getOpenOrders(pool: pg.Pool, playerId: string): Promise<OpenOrder[]> {
+  const { rows } = await pool.query<OpenOrder>(
+    `SELECT id, commodity, side, price::text AS price, qty_open::text AS qty_open
+       FROM orders
+      WHERE player_id = $1 AND status = 'open' AND qty_open > 0
+      ORDER BY created_at DESC`,
+    [playerId]
+  );
+  return rows;
+}
+
 export interface MarketDepthLevel {
   price: string;
   qty_open: string;

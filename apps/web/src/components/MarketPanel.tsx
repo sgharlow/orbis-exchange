@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import type { MarketSnapshot } from "@orbis/db";
+import { useCallback, useEffect, useState } from "react";
+import type { MarketSnapshot, OpenOrder } from "@orbis/db";
 import {
   COMMODITIES,
   type Commodity,
@@ -36,6 +36,9 @@ export function MarketPanel({
   const [joinName, setJoinName] = useState("");
   const [qty, setQty] = useState("1");
   const [busy, setBusy] = useState(false);
+  const [mode, setMode] = useState<"market" | "limit">("market");
+  const [limitPrice, setLimitPrice] = useState("");
+  const [openOrders, setOpenOrders] = useState<OpenOrder[]>([]);
   // Wallet snapshot from the dashboard's /api/me poll — used to bound trades so we
   // only ever surface viable orders (no wrong-price rests, no can't-afford fails).
   const [wallet, setWallet] = useState<{ credits: number; holdings: Record<string, number> }>({
@@ -195,7 +198,7 @@ export function MarketPanel({
         emitActivity("err", friendly(r.error ?? "order_failed"));
         return;
       }
-      emitActivity("ok", `${side === "buy" ? "bought" : "sold"} ${r.filled} ${commodity} @ ${formatCredits(px)} cr`);
+      emitActivity("ok", `${side === "buy" ? "bought" : "sold"} ${r.filled} ${commodity} @ ${formatCredits(r.avgFillPrice ?? px)} cr`);
       await refresh();
       // Nudge the dashboard (credits + holdings) to update at once.
       const pid = window.localStorage.getItem("orbis_player_id");
@@ -212,6 +215,82 @@ export function MarketPanel({
     if (!Number.isFinite(q) || q < 1) q = 1;
     q = Math.min(q, maxQty);
     await placeOrder(side, q, px);
+  }
+
+  const loadOrders = useCallback(async () => {
+    try {
+      const r = await fetch("/api/orders", { cache: "no-store" });
+      if (r.ok) setOpenOrders(((await r.json()) as { orders: OpenOrder[] }).orders ?? []);
+    } catch {
+      /* keep last */
+    }
+  }, []);
+
+  // Poll the player's own resting orders so the open-orders list + cancel stay current.
+  useEffect(() => {
+    if (!handle) {
+      setOpenOrders([]);
+      return;
+    }
+    loadOrders();
+    const id = setInterval(loadOrders, 3500);
+    return () => clearInterval(id);
+  }, [handle, loadOrders]);
+
+  // Limit order at the player's chosen price: fills whatever it crosses now and rests
+  // the remainder on the book — the order book the settlement story is built on. Unlike
+  // the market buttons, quantity is NOT clamped to best-level depth (resting is allowed).
+  async function placeLimit(side: "buy" | "sell") {
+    let q = Math.floor(Number(qty));
+    if (!Number.isFinite(q) || q < 1) q = 1;
+    const px = Math.floor(Number(limitPrice));
+    if (!Number.isInteger(px) || px <= 0) {
+      emitActivity("err", "enter a positive whole price");
+      return;
+    }
+    setBusy(true);
+    try {
+      const r = await postOrder(commodity, side, px, q);
+      if (r.status === 401) {
+        setHandle(null);
+        window.localStorage.removeItem("orbis_handle");
+        emitActivity("err", "session expired — reload to continue");
+        return;
+      }
+      if (!r.ok) {
+        emitActivity("err", friendly(r.error ?? "order_failed"));
+        return;
+      }
+      if (r.filled >= q) {
+        emitActivity("ok", `${side === "buy" ? "bought" : "sold"} ${r.filled} ${commodity} @ ${formatCredits(r.avgFillPrice ?? px)} cr`);
+      } else if (r.filled > 0) {
+        emitActivity("ok", `filled ${r.filled} @ ${formatCredits(r.avgFillPrice ?? px)}, ${q - r.filled} ${commodity} resting @ ${formatCredits(px)} cr`);
+      } else {
+        emitActivity("ok", `limit ${side} ${q} ${commodity} @ ${formatCredits(px)} cr — resting`);
+      }
+      await refresh();
+      await loadOrders();
+      const pid = window.localStorage.getItem("orbis_player_id");
+      if (pid) window.dispatchEvent(new CustomEvent("orbis:player", { detail: pid }));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function cancel(id: string) {
+    try {
+      const r = await fetch(`/api/orders/${id}`, { method: "DELETE" });
+      if (!r.ok) {
+        emitActivity("err", "could not cancel");
+        return;
+      }
+      emitActivity("ok", "order cancelled");
+      await loadOrders();
+      const pid = window.localStorage.getItem("orbis_player_id");
+      if (pid) window.dispatchEvent(new CustomEvent("orbis:player", { detail: pid }));
+    } catch {
+      emitActivity("err", "network error");
+    }
   }
 
   const asks = cumulativeDepth(market.asks);
@@ -313,6 +392,20 @@ export function MarketPanel({
       <div className="ticket">
         {handle ? (
           <>
+            <div className="mode-toggle" role="group" aria-label="Order type">
+              <button data-active={mode === "market"} onClick={() => setMode("market")}>
+                market
+              </button>
+              <button
+                data-active={mode === "limit"}
+                onClick={() => {
+                  setMode("limit");
+                  if (!limitPrice) setLimitPrice(market.last_price ?? String(askPrice || bidPrice || ""));
+                }}
+              >
+                limit
+              </button>
+            </div>
             <div className="trade-row">
               <label className="field qty-field">
                 <span>quantity</span>
@@ -323,32 +416,77 @@ export function MarketPanel({
                   aria-label="quantity"
                 />
               </label>
-              <div className="trade-quote">
-                <span>buy @ <b>{bestAsk ? formatCredits(bestAsk.price) : "—"}</b></span>
-                <span>sell @ <b>{bestBid ? formatCredits(bestBid.price) : "—"}</b></span>
+              {mode === "limit" ? (
+                <label className="field">
+                  <span>your price</span>
+                  <input
+                    inputMode="numeric"
+                    value={limitPrice}
+                    onChange={(e) => setLimitPrice(e.target.value)}
+                    aria-label="limit price"
+                  />
+                </label>
+              ) : (
+                <div className="trade-quote">
+                  <span>buy @ <b>{bestAsk ? formatCredits(bestAsk.price) : "—"}</b></span>
+                  <span>sell @ <b>{bestBid ? formatCredits(bestBid.price) : "—"}</b></span>
+                </div>
+              )}
+            </div>
+            {mode === "market" ? (
+              <>
+                <div className="ticket-actions">
+                  <button
+                    className="btn btn-buy"
+                    disabled={busy || maxBuy < 1}
+                    title={maxBuy >= 1 ? `Buy up to ${maxBuy} at ${askPrice}` : buyLabel}
+                    onClick={() => trade("buy", maxBuy, askPrice)}
+                  >
+                    {buyLabel}
+                  </button>
+                  <button
+                    className="btn btn-sell"
+                    disabled={busy || maxSell < 1}
+                    title={maxSell >= 1 ? `Sell up to ${maxSell} at ${bidPrice}` : sellLabel}
+                    onClick={() => trade("sell", maxSell, bidPrice)}
+                  >
+                    {sellLabel}
+                  </button>
+                </div>
+                <div className="ticket-who">
+                  buy up to <b>{maxBuy}</b> · sell up to <b>{maxSell}</b> · you’re {handle}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="ticket-actions">
+                  <button className="btn btn-buy" disabled={busy} onClick={() => placeLimit("buy")}>
+                    Buy @ {limitPrice || "—"}
+                  </button>
+                  <button className="btn btn-sell" disabled={busy} onClick={() => placeLimit("sell")}>
+                    Sell @ {limitPrice || "—"}
+                  </button>
+                </div>
+                <div className="ticket-who">limit orders rest on the book until they fill · you’re {handle}</div>
+              </>
+            )}
+            {openOrders.length > 0 && (
+              <div className="orders" aria-label="Your open orders">
+                <div className="orders-h">your open orders</div>
+                {openOrders.map((o) => (
+                  <div className="order-row" key={o.id}>
+                    <span className={`order-side ${o.side}`}>{o.side}</span>
+                    <span className="order-qty">{o.qty_open}</span>
+                    <span className="order-com">{o.commodity}</span>
+                    <span className="order-at">@</span>
+                    <span className="order-px">{formatCredits(o.price)}</span>
+                    <button className="order-cancel" onClick={() => cancel(o.id)} aria-label="cancel order">
+                      ✕
+                    </button>
+                  </div>
+                ))}
               </div>
-            </div>
-            <div className="ticket-actions">
-              <button
-                className="btn btn-buy"
-                disabled={busy || maxBuy < 1}
-                title={maxBuy >= 1 ? `Buy up to ${maxBuy} at ${askPrice}` : buyLabel}
-                onClick={() => trade("buy", maxBuy, askPrice)}
-              >
-                {buyLabel}
-              </button>
-              <button
-                className="btn btn-sell"
-                disabled={busy || maxSell < 1}
-                title={maxSell >= 1 ? `Sell up to ${maxSell} at ${bidPrice}` : sellLabel}
-                onClick={() => trade("sell", maxSell, bidPrice)}
-              >
-                {sellLabel}
-              </button>
-            </div>
-            <div className="ticket-who">
-              buy up to <b>{maxBuy}</b> · sell up to <b>{maxSell}</b> · you’re {handle}
-            </div>
+            )}
           </>
         ) : (
           <div className="join">

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { createPool } from "../src/connection.js";
 import { applyMigrations } from "../src/migrate.js";
-import { placeOrder, cancelOrder, getMarket, OrderError } from "../src/market.js";
+import { placeOrder, cancelOrder, getOpenOrders, getMarket, OrderError } from "../src/market.js";
 import { getLeaderboard, ensurePlayer, STARTING_CREDITS } from "../src/queries.js";
 
 const pool = createPool();
@@ -170,5 +170,34 @@ describe("leaderboard net worth", () => {
     expect(byHandle["bob"]).toBe("10500"); // 1500 credits + 90 ore * 100
     expect(byHandle["alice"]).toBe("10000"); // 9000 credits + 10 ore * 100
     expect(board.map((e) => e.handle)).toEqual(["bob", "alice", "carol"]);
+  });
+});
+
+describe("getOpenOrders", () => {
+  it("returns a player's resting orders and omits filled/cancelled ones", async () => {
+    // Bob rests a sell that nobody crosses -> open.
+    const resting = await placeOrder(pool, { player_id: BOB, commodity: "ore", side: "sell", price: 120, qty: 7 });
+    expect(resting.status).toBe("open");
+    // A second resting order on another commodity is impossible here (no inventory),
+    // so place another ore sell that also rests.
+    const resting2 = await placeOrder(pool, { player_id: BOB, commodity: "ore", side: "sell", price: 130, qty: 3 });
+
+    const open = await getOpenOrders(pool, BOB);
+    expect(open).toHaveLength(2);
+    expect(open.map((o) => o.id).sort()).toEqual([resting.order_id, resting2.order_id].sort());
+    expect(open.every((o) => o.side === "sell" && o.commodity === "ore")).toBe(true);
+    expect(open.find((o) => o.id === resting.order_id)?.price).toBe("120");
+
+    // Alice has no resting orders.
+    expect(await getOpenOrders(pool, ALICE)).toEqual([]);
+
+    // Cancel one -> it drops out of the open list.
+    await cancelOrder(pool, resting.order_id);
+    const afterCancel = await getOpenOrders(pool, BOB);
+    expect(afterCancel.map((o) => o.id)).toEqual([resting2.order_id]);
+
+    // Fill the remaining one -> it leaves the open list.
+    await placeOrder(pool, { player_id: ALICE, commodity: "ore", side: "buy", price: 130, qty: 3 });
+    expect(await getOpenOrders(pool, BOB)).toEqual([]);
   });
 });
