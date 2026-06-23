@@ -42,16 +42,26 @@ export async function postOrder(
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ commodity, side, price, qty }),
     });
-    let data: { fills?: { price: string; qty: string }[]; error?: string } = {};
+    let data: {
+      order_id?: string;
+      fills?: { buy_order_id: string; sell_order_id: string; price: string; qty: string }[];
+      error?: string;
+    } = {};
     try {
       data = await res.json();
     } catch {
       /* empty body */
     }
     if (!res.ok) return { ok: false, status: res.status, filled: 0, avgFillPrice: null, error: data.error ?? "order_failed" };
-    const fills = data.fills ?? [];
-    const filled = fills.reduce((s, f) => s + Number(f.qty), 0);
-    const value = fills.reduce((s, f) => s + Number(f.price) * Number(f.qty), 0);
+    // A single order can trigger a cascade of fills across the book (including
+    // agent-vs-agent pairs). Count ONLY the fills involving this order so the
+    // reported quantity/price reflect what the player actually traded.
+    const all = data.fills ?? [];
+    const mine = data.order_id
+      ? all.filter((f) => (side === "buy" ? f.buy_order_id : f.sell_order_id) === data.order_id)
+      : all;
+    const filled = mine.reduce((s, f) => s + Number(f.qty), 0);
+    const value = mine.reduce((s, f) => s + Number(f.price) * Number(f.qty), 0);
     const avgFillPrice = filled > 0 ? Math.round(value / filled) : null;
     return { ok: true, status: res.status, filled, avgFillPrice };
   } catch {
