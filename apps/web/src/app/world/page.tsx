@@ -5,6 +5,7 @@ import { MarketPanel } from "@/components/MarketPanel";
 import { PlayerDashboard } from "@/components/PlayerDashboard";
 import { LeaderboardPanel } from "@/components/LeaderboardPanel";
 import { ObjectiveRail } from "@/components/ObjectiveRail";
+import { GoalBar } from "@/components/GoalBar";
 import { Coachmark } from "@/components/Coachmark";
 import { ActivityFeed } from "@/components/ActivityFeed";
 import "./world.css";
@@ -32,6 +33,7 @@ export default async function WorldPage() {
             </p>
           </header>
           <ObjectiveRail />
+          <GoalBar />
           <div className="panels">
             <section className="panel" aria-label="World">
               <h2 className="panel-h">The Living World</h2>

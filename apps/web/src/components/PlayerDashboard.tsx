@@ -36,9 +36,18 @@ export function PlayerDashboard() {
       setMe(data);
       const holdings: Record<string, number> = {};
       for (const h of data.inventory) holdings[h.commodity] = Number(h.qty);
+      // Carry the authoritative handle (from the session cookie) so the leaderboard
+      // and goal bar can identify "you" reliably — localStorage `orbis_player_id` is
+      // only set on an explicit join, not on session rehydrate.
       window.dispatchEvent(
         new CustomEvent("orbis:me", {
-          detail: { joined: true, owned_cells: data.owned_cells, credits: Number(data.credits), holdings },
+          detail: {
+            joined: true,
+            owned_cells: data.owned_cells,
+            credits: Number(data.credits),
+            holdings,
+            handle: data.handle,
+          },
         })
       );
     } catch {
