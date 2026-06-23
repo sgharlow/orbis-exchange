@@ -2,14 +2,15 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { PlayerState } from "@orbis/db";
-import { formatCredits } from "@/lib/market-view";
+import { formatCredits, type Commodity } from "@/lib/market-view";
 import { legendColor } from "@/lib/world-view";
+import { bestBid, postOrder, friendly } from "@/lib/orders";
+import { emitActivity } from "@/lib/activity";
 
 export function PlayerDashboard() {
   const [me, setMe] = useState<PlayerState | null>(null);
   const [joined, setJoined] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
   const [rank, setRank] = useState<{ rank: number; total: number } | null>(null);
   const [editing, setEditing] = useState(false);
   const [nameInput, setNameInput] = useState("");
@@ -61,18 +62,45 @@ export function PlayerDashboard() {
 
   async function upgrade() {
     setBusy(true);
-    setMsg(null);
     try {
       const res = await fetch("/api/invest", { method: "POST" });
       const data = await res.json();
       if (res.ok) {
-        setMsg(`extraction → level ${data.level}`);
+        emitActivity("ok", `extraction upgraded → level ${data.level}`);
         await refresh();
       } else {
-        setMsg(data.error === "insufficient_credits" ? "not enough credits to upgrade" : "upgrade failed");
+        emitActivity("err", data.error === "insufficient_credits" ? "not enough credits to upgrade" : "upgrade failed");
       }
     } catch {
-      setMsg("network error");
+      emitActivity("err", "network error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // One-click sell, self-contained: look up the best bid for this holding's commodity
+  // and place a market sell bounded to that bid's depth. No cross-component hop and no
+  // switching the market tab / map reveal as a side effect.
+  async function sellHolding(commodity: string, qty: number) {
+    setBusy(true);
+    try {
+      const bid = await bestBid(commodity as Commodity);
+      if (!bid) {
+        emitActivity("err", `no buyers for ${commodity} right now`);
+        return;
+      }
+      const q = Math.max(1, Math.min(qty, bid.qty));
+      const r = await postOrder(commodity as Commodity, "sell", bid.price, q);
+      if (r.status === 401) {
+        emitActivity("err", "session expired — reload to continue");
+        return;
+      }
+      if (!r.ok) {
+        emitActivity("err", friendly(r.error ?? "order_failed"));
+        return;
+      }
+      emitActivity("ok", `sold ${r.filled} ${commodity} @ ${formatCredits(bid.price)} cr`);
+      await refresh();
     } finally {
       setBusy(false);
     }
@@ -172,12 +200,9 @@ export function PlayerDashboard() {
           <button
             className="dash-hold"
             key={h.commodity}
+            disabled={busy}
             title={`Sell your ${h.commodity} now at the best bid`}
-            onClick={() =>
-              window.dispatchEvent(
-                new CustomEvent("orbis:sell", { detail: { commodity: h.commodity, qty: Number(h.qty) } })
-              )
-            }
+            onClick={() => sellHolding(h.commodity, Number(h.qty))}
           >
             <span className="dash-dot" style={{ background: legendColor(h.commodity) }} />
             {h.qty} {h.commodity}
@@ -194,7 +219,6 @@ export function PlayerDashboard() {
               : "low on credits — claim a cell, then sell what it mines"}
         </div>
       )}
-      {msg && <div className="dash-msg">{msg}</div>}
     </section>
   );
 }

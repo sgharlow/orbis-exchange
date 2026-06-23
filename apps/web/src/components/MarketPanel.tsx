@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { MarketSnapshot } from "@orbis/db";
 import {
   COMMODITIES,
@@ -11,6 +11,8 @@ import {
   chartGeometry,
 } from "@/lib/market-view";
 import { legendColor } from "@/lib/world-view";
+import { postOrder, friendly } from "@/lib/orders";
+import { emitActivity } from "@/lib/activity";
 
 const POLL_MS = 2500;
 const DEPTH_LEVELS = 5; // best N price levels rendered per side (compact: keeps the trade ticket above the fold)
@@ -19,21 +21,6 @@ function guestHandle(): string {
   // A login-free per-browser identity. Math.random is fine here (display name only).
   // 6 base-36 chars keeps collisions negligible; the player can rename anytime.
   return "guest-" + Math.random().toString(36).slice(2, 8);
-}
-
-function friendly(code: string): string {
-  switch (code) {
-    case "insufficient_credits":
-      return "not enough credits";
-    case "insufficient_inventory":
-      return "not enough inventory";
-    case "invalid_input":
-      return "invalid order";
-    case "not_authenticated":
-      return "re-enter the market";
-    default:
-      return code.replace(/_/g, " ");
-  }
 }
 
 export function MarketPanel({
@@ -49,15 +36,12 @@ export function MarketPanel({
   const [joinName, setJoinName] = useState("");
   const [qty, setQty] = useState("1");
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
-  const [pendingSell, setPendingSell] = useState<{ commodity: Commodity; qty: number } | null>(null);
   // Wallet snapshot from the dashboard's /api/me poll — used to bound trades so we
   // only ever surface viable orders (no wrong-price rests, no can't-afford fails).
   const [wallet, setWallet] = useState<{ credits: number; holdings: Record<string, number> }>({
     credits: 0,
     holdings: {},
   });
-  const ticketRef = useRef<HTMLDivElement>(null);
 
   // Sessions are login-free. The signed cookie (checked via /api/me) is the source
   // of truth — NOT localStorage — so a dead/expired cookie can never leave the UI
@@ -184,85 +168,38 @@ export function MarketPanel({
         window.localStorage.setItem("orbis_player_id", d.playerId);
         // let the world view learn our id so our claimed cells outline brightly
         window.dispatchEvent(new CustomEvent("orbis:player", { detail: d.playerId }));
-        setMsg({ kind: "ok", text: `playing as ${d.handle} · 10,000 credits` });
+        emitActivity("ok", `playing as ${d.handle} · 10,000 credits`);
       } else {
-        setMsg({ kind: "err", text: "could not start a session" });
+        emitActivity("err", "could not start a session");
       }
     } finally {
       setBusy(false);
     }
   }
 
-  // Sell-from-holdings: clicking a holding in the dashboard switches to that
-  // commodity and (once its book loads) pre-fills a crossing sell, then scrolls
-  // the ticket into view — so selling is one obvious place, not a hunt.
-  useEffect(() => {
-    const onSell = (e: Event) => {
-      const d = (e as CustomEvent<{ commodity: string; qty: number }>).detail;
-      if (!d || !(COMMODITIES as readonly string[]).includes(d.commodity)) return;
-      setCommodity(d.commodity as Commodity);
-      window.dispatchEvent(new CustomEvent("orbis:reveal", { detail: d.commodity }));
-      setPendingSell({ commodity: d.commodity as Commodity, qty: d.qty });
-    };
-    window.addEventListener("orbis:sell", onSell as EventListener);
-    return () => window.removeEventListener("orbis:sell", onSell as EventListener);
-  }, []);
-
-  useEffect(() => {
-    // One-click sell: once the holding's commodity book is loaded, execute the sell
-    // immediately at the best bid (bounded to its depth so it fills fully). No second
-    // click and no scroll to the ticket — the top "sell" button in the dashboard is
-    // the whole interaction.
-    if (!pendingSell || market.commodity !== pendingSell.commodity) return;
-    const ps = pendingSell;
-    setPendingSell(null);
-    const bid = market.bids[0];
-    if (!bid) {
-      setMsg({ kind: "err", text: `no buyers for ${ps.commodity} right now` });
-      return;
-    }
-    const px = Number(bid.price);
-    const q = Math.max(1, Math.min(ps.qty, Number(bid.qty_open) || ps.qty));
-    void placeOrder("sell", q, px);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingSell, market]);
-
   // The single order path. BUY crosses the best ask, SELL crosses the best bid; the
   // caller passes an already-bounded quantity so the order always fills fully — never
   // rests, never fails. This is "only surface viable trades".
   async function placeOrder(side: "buy" | "sell", q: number, px: number) {
     if (q < 1 || px <= 0) return;
-    setMsg(null);
     setBusy(true);
     try {
-      const res = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ commodity, side, price: px, qty: q }),
-      });
-      if (res.status === 401) {
+      const r = await postOrder(commodity, side, px, q);
+      if (r.status === 401) {
         setHandle(null);
         window.localStorage.removeItem("orbis_handle");
-        setMsg({ kind: "err", text: "session expired — reload to continue" });
+        emitActivity("err", "session expired — reload to continue");
         return;
       }
-      const data = await res.json();
-      if (!res.ok) {
-        setMsg({ kind: "err", text: friendly(data.error ?? "order_failed") });
+      if (!r.ok) {
+        emitActivity("err", friendly(r.error ?? "order_failed"));
         return;
       }
-      const filled = (data.fills ?? []).reduce((s: number, f: { qty: string }) => s + Number(f.qty), 0);
-      setMsg({
-        kind: "ok",
-        text: `${side === "buy" ? "bought" : "sold"} ${filled} ${commodity} @ ${formatCredits(px)} cr`,
-      });
+      emitActivity("ok", `${side === "buy" ? "bought" : "sold"} ${r.filled} ${commodity} @ ${formatCredits(px)} cr`);
       await refresh();
-      // Nudge the dashboard (credits + holdings) to update at once, so the result of a
-      // top-of-UI one-click sell is visible immediately rather than on the next poll.
+      // Nudge the dashboard (credits + holdings) to update at once.
       const pid = window.localStorage.getItem("orbis_player_id");
       if (pid) window.dispatchEvent(new CustomEvent("orbis:player", { detail: pid }));
-    } catch {
-      setMsg({ kind: "err", text: "network error" });
     } finally {
       setBusy(false);
     }
@@ -373,7 +310,7 @@ export function MarketPanel({
         </div>
       </div>
 
-      <div className="ticket" ref={ticketRef}>
+      <div className="ticket">
         {handle ? (
           <>
             <div className="trade-row">
@@ -427,7 +364,6 @@ export function MarketPanel({
             </button>
           </div>
         )}
-        {msg && <div className={`ticket-msg ${msg.kind}`}>{msg.text}</div>}
       </div>
 
       <ul className="tape" aria-label="Recent trades">

@@ -6,6 +6,7 @@ import { PlayerDashboard } from "@/components/PlayerDashboard";
 import { LeaderboardPanel } from "@/components/LeaderboardPanel";
 import { ObjectiveRail } from "@/components/ObjectiveRail";
 import { Coachmark } from "@/components/Coachmark";
+import { ActivityFeed } from "@/components/ActivityFeed";
 import "./world.css";
 
 export const dynamic = "force-dynamic";
@@ -48,6 +49,7 @@ export default async function WorldPage() {
           </footer>
         </div>
         <Coachmark />
+        <ActivityFeed />
       </main>
     );
   } finally {

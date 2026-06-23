@@ -11,6 +11,7 @@ import {
   cellIndexFromPoint,
 } from "@/lib/world-view";
 import { formatCredits } from "@/lib/market-view";
+import { emitActivity } from "@/lib/activity";
 
 const CELL = 9; // logical px per cell
 const POLL_MS = 3000; // matches the simulation tick (spec §5.2)
@@ -43,7 +44,6 @@ export function WorldView({
   const [paused, setPaused] = useState(false);
   const [reveal, setReveal] = useState<string | null>(null);
   const [hover, setHover] = useState<{ left: number; top: number; text: string } | null>(null);
-  const [claimMsg, setClaimMsg] = useState<{ kind: "ok" | "err" | "info"; text: string } | null>(null);
 
   const size = gridSize(initialCells);
   const n = size * size;
@@ -449,12 +449,10 @@ export function WorldView({
       const price = listPricesRef.current[idx];
       setAskPrice(price ?? "");
       setSel({ idx, cellId, price });
-      setClaimMsg(null);
       redrawRef.current?.();
       return;
     }
 
-    setClaimMsg({ kind: "info", text: "claiming…" });
     try {
       const res = await fetch("/api/claims", {
         method: "POST",
@@ -462,35 +460,34 @@ export function WorldView({
         body: JSON.stringify({ cell_id: cellId }),
       });
       if (res.status === 401) {
-        setClaimMsg({ kind: "err", text: "join via the market panel to claim cells" });
+        emitActivity("err", "join the market to claim cells");
         return;
       }
       const data = await res.json();
       if (data.claimed) {
         ownerIdsRef.current[idx] = myIdRef.current ?? window.localStorage.getItem("orbis_player_id");
         redrawRef.current?.();
-        setClaimMsg({
-          kind: "ok",
-          text: paused
+        emitActivity(
+          "ok",
+          paused
             ? `claimed cell ${cellId} — it mines each tick once the world is live`
-            : `claimed cell ${cellId} — it now mines for you`,
-        });
+            : `claimed cell ${cellId} — it now mines for you`
+        );
       } else {
         const r = data.reason;
-        setClaimMsg({
-          kind: "err",
-          text:
-            r === "taken"
-              ? "already claimed"
-              : r === "insufficient_credits"
-                ? "need 500 cr — sell some holdings (click a holding in your dashboard) to afford it"
-                : r === "cell_cap"
-                  ? "cell limit reached (12) — sell or list a cell before claiming another"
-                  : "could not claim",
-        });
+        emitActivity(
+          "err",
+          r === "taken"
+            ? "already claimed"
+            : r === "insufficient_credits"
+              ? "need 500 cr — sell a holding in your dashboard to afford it"
+              : r === "cell_cap"
+                ? "cell limit reached (12) — sell or list a cell before claiming another"
+                : "could not claim"
+        );
       }
     } catch {
-      setClaimMsg({ kind: "err", text: "network error" });
+      emitActivity("err", "network error");
     }
   }
 
@@ -503,23 +500,23 @@ export function WorldView({
         body: JSON.stringify({ price }),
       });
       if (res.status === 401) {
-        setClaimMsg({ kind: "err", text: "join via the market panel first" });
+        emitActivity("err", "join the market first");
         return;
       }
       const data = await res.json();
       if (!res.ok) {
-        setClaimMsg({ kind: "err", text: data.error ?? "could not list" });
+        emitActivity("err", data.error ?? "could not list");
         return;
       }
       listPricesRef.current[sel.idx] = price === null ? null : String(price);
       redrawRef.current?.();
-      setClaimMsg({
-        kind: "ok",
-        text: price === null ? "cell unlisted" : `listed for ${formatCredits(price)} cr — gold outline marks it for sale`,
-      });
+      emitActivity(
+        "ok",
+        price === null ? "plot unlisted" : `plot listed for ${formatCredits(price)} cr — gold outline marks it listed`
+      );
       setSel(null);
     } catch {
-      setClaimMsg({ kind: "err", text: "network error" });
+      emitActivity("err", "network error");
     }
   }
 
@@ -603,7 +600,7 @@ export function WorldView({
       <div className="claim-line">
         {sel ? (
           <span className="list-form">
-            <span className="list-cell">cell {sel.cellId}{sel.price ? ` · listed at ${formatCredits(sel.price)}` : ""}</span>
+            <span className="list-cell">plot {sel.cellId}{sel.price ? ` · listed at ${formatCredits(sel.price)}` : ""}</span>
             <input
               inputMode="numeric"
               placeholder="price"
@@ -615,13 +612,13 @@ export function WorldView({
               onClick={() => {
                 const p = Number(askPrice);
                 if (!Number.isInteger(p) || p <= 0) {
-                  setClaimMsg({ kind: "err", text: "enter a positive whole price" });
+                  emitActivity("err", "enter a positive whole price");
                   return;
                 }
                 submitListing(p);
               }}
             >
-              list
+              list plot
             </button>
             {sel.price !== null && <button onClick={() => submitListing(null)}>unlist</button>}
             <button
@@ -634,10 +631,8 @@ export function WorldView({
               ✕
             </button>
           </span>
-        ) : claimMsg ? (
-          <span className={`claim-msg ${claimMsg.kind}`}>{claimMsg.text}</span>
         ) : (
-          <span className="claim-hint">hover a cell to inspect it · scroll to zoom (drag to pan) · click to claim — your cells mine every tick · click a cell you own to list the plot for sale</span>
+          <span className="claim-hint"><b>click any cell to claim it</b> (500 cr) · it mines every tick · scroll to zoom, drag to pan · click a cell you own to list the plot</span>
         )}
       </div>
 
@@ -675,7 +670,7 @@ export function WorldView({
         </span>
         <span className="scale-marks">
           <span className="scale-mark"><span className="mk mk-own" /> your cell</span>
-          <span className="scale-mark"><span className="mk mk-listed" /> for sale</span>
+          <span className="scale-mark"><span className="mk mk-listed" /> listed plot</span>
         </span>
       </div>
     </div>
