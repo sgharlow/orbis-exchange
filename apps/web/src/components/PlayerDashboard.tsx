@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { PlayerState } from "@orbis/db";
 import { formatCredits, type Commodity } from "@/lib/market-view";
 import { legendColor } from "@/lib/world-view";
@@ -16,6 +16,21 @@ export function PlayerDashboard() {
   const [nameInput, setNameInput] = useState("");
   const [renameErr, setRenameErr] = useState<string | null>(null);
   const [renaming, setRenaming] = useState(false);
+
+  // Juice: transient feedback for what changed since the last poll.
+  const [floaters, setFloaters] = useState<{ id: number; text: string; tone: "pos" | "neg" }[]>([]);
+  const [creditFlash, setCreditFlash] = useState<"pos" | "neg" | null>(null);
+  const [rankPulse, setRankPulse] = useState(false);
+  const prevCreditsRef = useRef<number | null>(null);
+  const prevHoldingsRef = useRef<Record<string, number>>({});
+  const prevRankRef = useRef<number | null>(null);
+  const fidRef = useRef(0);
+
+  const pushFloater = useCallback((text: string, tone: "pos" | "neg") => {
+    const fid = ++fidRef.current;
+    setFloaters((f) => [...f.slice(-4), { id: fid, text, tone }]);
+    setTimeout(() => setFloaters((f) => f.filter((x) => x.id !== fid)), 1300);
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
@@ -36,6 +51,27 @@ export function PlayerDashboard() {
       setMe(data);
       const holdings: Record<string, number> = {};
       for (const h of data.inventory) holdings[h.commodity] = Number(h.qty);
+
+      // Surface deltas as floaters/flash (skip the first poll so we don't animate the
+      // initial state). Credit change → flash + ±delta floater; mined inventory →
+      // +N floater. Decreases from selling are already reported by the activity feed.
+      const firstPoll = prevCreditsRef.current === null;
+      const newCredits = Number(data.credits);
+      if (!firstPoll && newCredits !== prevCreditsRef.current) {
+        const delta = newCredits - (prevCreditsRef.current ?? newCredits);
+        pushFloater(`${delta > 0 ? "+" : "−"}${formatCredits(Math.abs(delta))} cr`, delta > 0 ? "pos" : "neg");
+        setCreditFlash(delta > 0 ? "pos" : "neg");
+        setTimeout(() => setCreditFlash(null), 650);
+      }
+      prevCreditsRef.current = newCredits;
+      if (!firstPoll) {
+        for (const [c, q] of Object.entries(holdings)) {
+          const was = prevHoldingsRef.current[c] ?? 0;
+          if (q > was) pushFloater(`+${q - was} ${c}`, "pos");
+        }
+      }
+      prevHoldingsRef.current = holdings;
+
       // Carry the authoritative handle (from the session cookie) so the leaderboard
       // and goal bar can identify "you" reliably — localStorage `orbis_player_id` is
       // only set on an explicit join, not on session rehydrate.
@@ -53,13 +89,22 @@ export function PlayerDashboard() {
     } catch {
       /* keep last state */
     }
-  }, []);
+  }, [pushFloater]);
 
   useEffect(() => {
     refresh();
     const id = setInterval(refresh, 3000);
     const onPlayer = () => refresh();
-    const onRank = (e: Event) => setRank((e as CustomEvent<{ rank: number; total: number }>).detail);
+    const onRank = (e: Event) => {
+      const d = (e as CustomEvent<{ rank: number; total: number }>).detail;
+      setRank(d);
+      // Climbing the leaderboard (rank number goes down) gets a pulse.
+      if (prevRankRef.current !== null && d.rank < prevRankRef.current) {
+        setRankPulse(true);
+        setTimeout(() => setRankPulse(false), 1300);
+      }
+      prevRankRef.current = d.rank;
+    };
     window.addEventListener("orbis:player", onPlayer);
     window.addEventListener("orbis:rank", onRank as EventListener);
     return () => {
@@ -158,6 +203,13 @@ export function PlayerDashboard() {
 
   return (
     <section className="dash" aria-label="Player dashboard">
+      <div className="dash-floaters" aria-hidden="true">
+        {floaters.map((f) => (
+          <span className={`floater ${f.tone}`} key={f.id}>
+            {f.text}
+          </span>
+        ))}
+      </div>
       <div className="dash-top">
         {editing ? (
           <span className="dash-rename">
@@ -188,13 +240,13 @@ export function PlayerDashboard() {
             {me.handle} <span className="dash-edit" aria-hidden="true">✎</span>
           </button>
         )}
-        <span className="dash-credits">{formatCredits(me.credits)} <em>cr</em></span>
+        <span className={`dash-credits${creditFlash ? ` flash-${creditFlash}` : ""}`}>{formatCredits(me.credits)} <em>cr</em></span>
       </div>
       {renameErr && <div className="dash-rename-err">{renameErr}</div>}
       <div className="dash-stats">
         <span className="dash-stat"><b>{me.owned_cells}</b> cells</span>
         <span className="dash-stat">extraction <b>L{me.level}</b></span>
-        {rank && <span className="dash-stat">rank <b>{rank.rank}</b> / {rank.total}</span>}
+        {rank && <span className={`dash-stat${rankPulse ? " rank-pulse" : ""}`}>rank <b>{rank.rank}</b> / {rank.total}</span>}
         <button className="dash-upgrade" disabled={busy} onClick={upgrade}>↑ upgrade</button>
       </div>
       <div className="dash-inv">
