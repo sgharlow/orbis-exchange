@@ -8,6 +8,7 @@
     "db:migrate": "pnpm --filter @orbis/db migrate",
     "db:seed": "pnpm --filter @orbis/db seed",
     "db:smoke": "pnpm --filter @orbis/db smoke",
+    "db:reseed-live": "node scripts/reseed-live.mjs",
     "dev": "pnpm --filter @orbis/web dev",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
