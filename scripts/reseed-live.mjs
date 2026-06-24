@@ -30,8 +30,13 @@ const PROD = "https://orbis-exchange.vercel.app";
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// NB: shell:false. Under shell:true on Windows, cmd.exe mangles the quotes in
+// the JSON `--flexible-time-window` / `--target` args to create-schedule, so the
+// worker-resume silently fails and the live world freezes. Passing the args array
+// directly (no shell) quotes them correctly. aws-cli v2 installs aws.exe on PATH.
+const AWS_BIN = process.platform === "win32" ? "aws.exe" : "aws";
 function aws(args) {
-  return spawnSync("aws", args, { encoding: "utf8", shell: true });
+  return spawnSync(AWS_BIN, args, { encoding: "utf8" });
 }
 function scheduleState() {
   const r = aws(["scheduler", "get-schedule", "--name", SCHEDULE, "--region", REGION, "--query", "State", "--output", "text"]);

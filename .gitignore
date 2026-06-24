@@ -24,6 +24,8 @@ VERCEL-ENV-CHECKLIST.md
 demo-out/
 demo-record.mjs
 demo-cards.mjs
+.demo-capture/
+capture-demo.mjs
 
 # economy prototype sim (local tooling)
 apps/worker/prototype-sim.mjs
