@@ -95,7 +95,7 @@ reconciliation pass. Orbis is that proof you can click on.
   CA in memory, mines owned cells, matches + settles crossing orders, and
   **persists only deltas**. In the cloud this is a scheduled invocation.
 - **Monorepo:** pnpm workspaces (`apps/web`, `apps/worker`, `packages/db`),
-  TypeScript end to end, 134 tests (db 53 · web 36 · worker 45 — CA rules,
+  TypeScript end to end, 135 tests (db 54 · web 36 · worker 45 — CA rules,
   settlement, matching, mining, claims, agents, SSE, single-flight scheduling),
   all green.
 
@@ -192,8 +192,8 @@ critical settlement path.
       confirm the attribution wording against the Official Rules, then add the live
       URL here. This is nearly-free points; don't skip it.
 
-> Status (updated 2026-06-22): the game is feature-complete, tested (134 green —
-> db 53 · web 36 · worker 45), and **deployed live** at
+> Status (updated 2026-06-22): the game is feature-complete, tested (135 green —
+> db 54 · web 36 · worker 45), and **deployed live** at
 > https://orbis-exchange.vercel.app on Aurora DSQL. Production was re-seeded clean
 > on 2026-06-22 (14 agents at ~1.5M baseline, empty field) and the worker
 > `orbis-heartbeat` (rate(1 min) → orbis-tick) is **enabled — the world is

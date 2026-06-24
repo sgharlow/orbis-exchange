@@ -8,7 +8,7 @@ same strongly-consistent ledger.** Can you out-trade the machine?
 
 **▶ Live:** https://orbis-exchange.vercel.app · **🎬 Demo video:** <!-- FILL AT SUBMISSION: paste the public YouTube/Vimeo URL here --> _(link added after recording)_
 
-> **Submission status:** engineering complete · cloud **LIVE** (Aurora DSQL active, world ticking) · **134 tests green** (db 53 · web 36 · worker 45) · `next build` clean. Only user/interactive capture + submit remains. Turnkey paste sheet: [`docs/DEVPOST-PASTE-MAP.md`](docs/DEVPOST-PASTE-MAP.md). Ordered cliff-day path: [`docs/SUBMISSION-STATUS.md`](docs/SUBMISSION-STATUS.md).
+> **Submission status:** engineering complete · cloud **LIVE** (Aurora DSQL active, world ticking) · **135 tests green** (db 54 · web 36 · worker 45) · `next build` clean. Only user/interactive capture + submit remains. Turnkey paste sheet: [`docs/DEVPOST-PASTE-MAP.md`](docs/DEVPOST-PASTE-MAP.md). Ordered cliff-day path: [`docs/SUBMISSION-STATUS.md`](docs/SUBMISSION-STATUS.md).
 
 A 64×64 resource world evolves every tick by cellular-automaton rules — regions
 bloom and collapse, so scarcity is *emergent*, never authored. One global order
@@ -74,7 +74,7 @@ DATABASE_URL=postgres://orbis:orbis@localhost:5434/orbis pnpm --filter @orbis/wo
 
 Open **http://localhost:3000** — you're auto-joined as a guest and redirected to
 `/world`; click a cell to claim it (up to 12 cells per player). Tests: `pnpm -r test`
-(needs Docker up) — **134 green** (db 53 · web 36 · worker 45). Cloud (Aurora DSQL +
+(needs Docker up) — **135 green** (db 54 · web 36 · worker 45). Cloud (Aurora DSQL +
 Vercel): `docs/superpowers/runbooks/phase-0-cloud-provisioning.md`.
 
 ## Stack

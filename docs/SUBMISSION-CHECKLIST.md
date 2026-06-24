@@ -5,7 +5,7 @@
 **Live app:** https://orbis-exchange.vercel.app
 **This file:** a single requirement→evidence→gap→owner matrix, with **live verification run 2026-06-19**. It complements — does not replace — [`SUBMISSION-STATUS.md`](SUBMISSION-STATUS.md) (ordered remaining steps) and [`devpost-submission.md`](devpost-submission.md) (the prose answers). When they disagree, this file's "Live verification" column is the freshest signal.
 
-> **Bottom line (2026-06-19):** the read path is fully live and healthy in the cloud; all 134 tests green; the UI demo surface is complete. **Every open item is user/interactive** (worker already scheduled/ENABLED → dogfood → multi-region capture → video → Devpost form). No engineering blocker stands between today and submission.
+> **Bottom line (2026-06-19):** the read path is fully live and healthy in the cloud; all 135 tests green; the UI demo surface is complete. **Every open item is user/interactive** (worker already scheduled/ENABLED → dogfood → multi-region capture → video → Devpost form). No engineering blocker stands between today and submission.
 
 ---
 
@@ -21,7 +21,7 @@ Probed the deployed app at https://orbis-exchange.vercel.app (anonymous / logged
 | `GET /api/market/rare` | ✅ 200 | last 102; spread 100→102; populated book |
 | `GET /api/leaderboard` | ✅ 200 | clean 14-agent roster on the ~1.5M baseline (post 2026-06-22 re-seed); tight competitive AI-vs-human spread, no runaway (12-cell cap closes it — see note 3) |
 | `/world` UI | ✅ renders | living-world canvas rendered as a **single-hue (cyan) density heatmap with bloom glow** (brightness = abundance) + 3 panels (LIVING WORLD / GLOBAL MARKET / LEADERBOARD AI VS HUMAN); on-demand reveal-layer chips, "my cells" spotlight, inline cell tooltip; an always-visible objective rail (Enter → Claim → Sell) + first-visit how-to card. Opening the link **auto-joins you as a guest — no login/signup/handle prompt**; rename inline anytime. |
-| Full test suite `pnpm -r test` | ✅ **134 green** | db 53 · web 36 · worker 45 |
+| Full test suite `pnpm -r test` | ✅ **135 green** | db 54 · web 36 · worker 45 |
 
 **Two observations (neither is a submit blocker):**
 
@@ -49,7 +49,7 @@ Probed the deployed app at https://orbis-exchange.vercel.app (anonymous / logged
 
 | Gate | State | Evidence |
 |---|---|---|
-| Full test suite | ✅ 134 green | `pnpm -r test` (db 53 · web 36 · worker 45) |
+| Full test suite | ✅ 135 green | `pnpm -r test` (db 54 · web 36 · worker 45) |
 | Live health + read path | ✅ | §A above |
 | Market liquid (books populated, agents trading) | ✅ | §A — books populated, agents trading; the 12-cell-per-player cap closes the old `scout-r0` runaway, so the leaderboard stays a tight AI-vs-human race with no reset-before-record needed (see [SUBMISSION-STATUS §3c](SUBMISSION-STATUS.md)) |
 | MIT LICENSE, default branch `main` | ✅ | per SUBMISSION-STATUS |
