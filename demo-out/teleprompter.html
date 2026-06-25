@@ -59,7 +59,7 @@
 </div>
 <script>
 // Cue times are on the FINAL video timeline (4s intro card + demo + 5s end card).
-// Re-timed to orbis-demo-newux.mp4 (new-UX recapture, 2:47). Same narration as before.
+// Re-timed to orbis-demo-newux.mp4 (new-UX recapture + DSQL region stills, 2:53). Same narration as before.
 const SEGS = [
   { t:7,   label:"00:07 · The living world",            text:"One living world. A grid of resources that grows, spreads, and collapses on its own — no script, just rules. The abundance you see is the data, evolving in real time." },
   { t:36,  label:"00:36 · Claim & mine",                text:"I can claim a piece of it. That cell is mine now — every few seconds it mines its resource into my inventory and depletes the land. Scarcity is emergent: where the land thins, prices are about to move." },
@@ -108,7 +108,7 @@ function render() {
       if (dt<=8) meta.insertAdjacentHTML('beforeend', ` <span class="cue">— in ${dt}s</span>`);
     } else { meta.querySelector('.cue')?.remove(); }
     if (i===idx) {
-      const end = (i+1<SEGS.length)? SEGS[i+1].t : (v.duration||167);
+      const end = (i+1<SEGS.length)? SEGS[i+1].t : (v.duration||173);
       const pct = Math.min(100, Math.max(0, (ct - seg.t)/(end - seg.t)*100));
       el.querySelector('.prog > i').style.width = pct+'%';
     }
@@ -137,7 +137,7 @@ document.addEventListener('keydown', e => {
   else if (e.key==='r'||e.key==='R'){ v.currentTime=0; v.play(); }
   else if (e.key===']'){ SPEED+=0.05; applySpeed(); }
   else if (e.key==='['){ SPEED-=0.05; applySpeed(); }
-  else if (e.key==='ArrowRight'){ v.currentTime=Math.min((v.duration||167), v.currentTime+5); }
+  else if (e.key==='ArrowRight'){ v.currentTime=Math.min((v.duration||173), v.currentTime+5); }
   else if (e.key==='ArrowLeft'){ v.currentTime=Math.max(0, v.currentTime-5); }
   else if (e.key==='ArrowDown'){ const n=SEGS.find(s=>s.t>v.currentTime+0.2); if(n) v.currentTime=n.t+0.05; }
   else if (e.key==='ArrowUp'){ const p=[...SEGS].reverse().find(s=>s.t<v.currentTime-0.2); if(p) v.currentTime=p.t+0.05; }

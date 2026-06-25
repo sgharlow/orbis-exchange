@@ -46,7 +46,7 @@ Paste each section from `devpost-submission.md` under the matching Devpost headi
 | Asset | File | Notes |
 |---|---|---|
 | **Architecture diagram** | `docs/architecture.png` (214 KB raster) | Devpost wants a raster; `.png` is ready. `architecture.svg` is the source. |
-| **Storage screenshot** (Aurora DSQL console — cluster + region config) | _capture during the multi-region stand-up (Step D-3 / SUBMISSION-STATUS §5)_ | **H0 hard requirement.** |
+| **Storage screenshot** (Aurora DSQL console — multi-region) | `docs/gallery/orbis-dsql-us-east-1.jpg` + `docs/gallery/orbis-dsql-us-west-2.jpg` | **H0 hard requirement — DONE.** Two AWS console captures of the active-active pair: us-east-1 primary `lbt34ey3…` (Peers tab → us-west-2 + us-east-2 witness) and us-west-2 peer `3rt34e6h…`. Upload both. Also spliced into the demo video at the multi-region beat (~2:24). |
 | Gameplay screenshots (optional but recommended) | _capture from the live, ticking `/world`_ | Worker is scheduled (ENABLED) and the world is re-seeded clean (14-agent leaderboard); capture the cyan density heatmap + objective rail. |
 
 ## E. H0-specific custom fields (the rubric items)

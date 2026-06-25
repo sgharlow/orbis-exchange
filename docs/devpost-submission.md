@@ -187,8 +187,10 @@ critical settlement path.
       walkthrough. *(record before submit; paste the URL over `PASTE-VIDEO-URL` above)*
 - [ ] **Published Vercel project link + Vercel Team ID.** *(app is deployed live at
       https://orbis-exchange.vercel.app — paste the project link + Team ID)*
-- [ ] **Storage screenshots** proving Aurora DSQL usage (cluster + connection
-      config). *(capture during the multi-region stand-up — see `docs/superpowers/runbooks/phase-0-cloud-provisioning.md`)*
+- [x] **Storage screenshots** proving Aurora DSQL usage — `docs/gallery/orbis-dsql-us-east-1.jpg`
+      + `docs/gallery/orbis-dsql-us-west-2.jpg` (the active-active pair's console, both regions'
+      Peers tabs). Upload both to the gallery; they're also spliced into the demo video at the
+      multi-region beat (~2:24).
 - [ ] **Bonus (+up to 0.6 on Stage-2 score):** publish the build write-up
       **before June 29** with `#H0Hackathon` + required attribution. **Draft ready
       at [`blog-post.md`](blog-post.md)** — paste into Dev.to / Medium / your blog,
