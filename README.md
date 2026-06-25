@@ -15,8 +15,9 @@ bloom and collapse, so scarcity is *emergent*, never authored. One global order
 book per commodity turns that scarcity into price, and **every fill settles as one
 short, strongly-consistent transaction**: no double-spend, no oversell, no
 reconciliation. Algorithmic agents are first-class players that trade the same
-book you do, at zero inference cost — they keep the world liquid and they're the
-opponent on one net-worth leaderboard. Open the link and you're **dropped in as a
+book you do, at zero inference cost: market-makers and a liquidity pulse keep it
+liquid, while momentum, value and arbitrage bots are the opponent on one net-worth
+leaderboard. Open the link and you're **dropped in as a
 guest instantly — no login, no signup** — then rename to anything unique inline
 whenever you like. **Scroll to zoom in** on the exact cell before you claim it, and
 **sell a holding in one click** straight from your dashboard.
