@@ -44,12 +44,12 @@
 <body>
 <div class="wrap">
   <div class="left">
-    <video id="v" src="orbis-demo-final.mp4" preload="auto" muted playsinline></video>
+    <video id="v" src="orbis-demo-newux.mp4" preload="auto" muted playsinline></video>
     <div class="bar">
       <button id="play">▶ Play</button>
       <button id="restart">⟲ Restart</button>
       <button id="slower">– speed</button>
-      <span class="t" id="speed">1.15×</span>
+      <span class="t" id="speed">1.00×</span>
       <button id="faster">+ speed</button>
       <span class="t" id="clock">0:00 / 0:00</span>
       <span class="hint">Space play/pause · R restart · [ ] speed · ↑↓ prev/next line · ←→ seek 5s · click a line to jump</span>
@@ -59,16 +59,17 @@
 </div>
 <script>
 // Cue times are on the FINAL video timeline (4s intro card + demo + 5s end card).
+// Re-timed to orbis-demo-newux.mp4 (new-UX recapture, 2:47). Same narration as before.
 const SEGS = [
   { t:7,   label:"00:07 · The living world",            text:"One living world. A grid of resources that grows, spreads, and collapses on its own — no script, just rules. The abundance you see is the data, evolving in real time." },
-  { t:33,  label:"00:33 · Claim & mine",                text:"I can claim a piece of it. That cell is mine now — every few seconds it mines its resource into my inventory and depletes the land. Scarcity is emergent: where the land thins, prices are about to move." },
+  { t:36,  label:"00:36 · Claim & mine",                text:"I can claim a piece of it. That cell is mine now — every few seconds it mines its resource into my inventory and depletes the land. Scarcity is emergent: where the land thins, prices are about to move." },
   { t:50,  label:"00:50 · One global market",           text:"On the right is the other half of the same screen: one global market. One order book per commodity, price-time priority. The map and the book are the same ledger, seen two ways." },
-  { t:69,  label:"01:09 · The trade settles",           text:"Watch this. I place a buy that crosses a resting sell — and it settles instantly. One short transaction debited me, paid the seller, moved the inventory, and recorded the trade — with the balance and inventory checks asserted inside that transaction." },
-  { t:92,  label:"01:32 · The machines",                text:"Here's the twist: most of these orders aren't people. Maker, momentum, value and scout bots are first-class players — same order book, same code path I just used, zero inference cost. They keep the world alive, and they're the competition." },
-  { t:111, label:"01:51 · Leaderboard — AI vs human",   text:"One leaderboard ranks everyone — human and AI — by net worth. Which comes down to one question: can you out-trade the machine?" },
-  { t:129, label:"02:09 · Amazon Aurora DSQL",          text:"All of this rests on Amazon Aurora DSQL — the single source of truth. Strongly consistent, so no order can double-spend credits or sell the same unit twice, and there's no reconciliation pass, ever. Three runtimes share one ledger: the Next.js app on Vercel, the simulation heartbeat, and the agents." },
-  { t:147, label:"02:27 · Active-active, multi-region", text:"And DSQL is active-active across regions by design — so a player in Frankfurt and one in Virginia would trade on one consistent world, with zero coordination in our code. That's the million-scale story: not a benchmark, a guarantee." },
-  { t:160, label:"02:40 · Close (end card)",            text:"Orbis Exchange — one living world, one ledger, and a machine to beat." },
+  { t:68,  label:"01:08 · The trade settles",           text:"Watch this. I place a buy that crosses a resting sell — and it settles instantly. One short transaction debited me, paid the seller, moved the inventory, and recorded the trade — with the balance and inventory checks asserted inside that transaction." },
+  { t:91,  label:"01:31 · The machines",                text:"Here's the twist: most of these orders aren't people. Maker, momentum, value and scout bots are first-class players — same order book, same code path I just used, zero inference cost. They keep the world alive, and they're the competition." },
+  { t:110, label:"01:50 · Leaderboard — AI vs human",   text:"One leaderboard ranks everyone — human and AI — by net worth. Which comes down to one question: can you out-trade the machine?" },
+  { t:127, label:"02:07 · Amazon Aurora DSQL",          text:"All of this rests on Amazon Aurora DSQL — the single source of truth. Strongly consistent, so no order can double-spend credits or sell the same unit twice, and there's no reconciliation pass, ever. Three runtimes share one ledger: the Next.js app on Vercel, the simulation heartbeat, and the agents." },
+  { t:144, label:"02:24 · Active-active, multi-region", text:"And DSQL is active-active across regions by design — so a player in Frankfurt and one in Virginia would trade on one consistent world, with zero coordination in our code. That's the million-scale story: not a benchmark, a guarantee." },
+  { t:158, label:"02:38 · Close",                       text:"Orbis Exchange — one living world, one ledger, and a machine to beat." },
 ];
 
 const v = document.getElementById('v');
@@ -107,7 +108,7 @@ function render() {
       if (dt<=8) meta.insertAdjacentHTML('beforeend', ` <span class="cue">— in ${dt}s</span>`);
     } else { meta.querySelector('.cue')?.remove(); }
     if (i===idx) {
-      const end = (i+1<SEGS.length)? SEGS[i+1].t : (v.duration||171);
+      const end = (i+1<SEGS.length)? SEGS[i+1].t : (v.duration||167);
       const pct = Math.min(100, Math.max(0, (ct - seg.t)/(end - seg.t)*100));
       el.querySelector('.prog > i').style.width = pct+'%';
     }
@@ -115,8 +116,9 @@ function render() {
   if (idx !== activeIdx && idx>=0) { activeIdx=idx; nodes[idx].scrollIntoView({block:'center'}); }
   clock.textContent = fmt(ct)+' / '+fmt(v.duration||0);
 }
-// playback speed (default +15% — the script was pacing too slow at 1.0×)
-let SPEED = 1.15;
+// playback speed — default 1.00× so your narration timing matches the final 1.0×
+// silent video exactly (clean audio merge). Nudge with [ ] only if you want to rehearse.
+let SPEED = 1.00;
 const speedEl = document.getElementById('speed');
 function applySpeed(){ SPEED = Math.min(2, Math.max(0.5, Math.round(SPEED*100)/100)); v.playbackRate = SPEED; speedEl.textContent = SPEED.toFixed(2)+'×'; }
 v.addEventListener('loadedmetadata', applySpeed);
@@ -135,7 +137,7 @@ document.addEventListener('keydown', e => {
   else if (e.key==='r'||e.key==='R'){ v.currentTime=0; v.play(); }
   else if (e.key===']'){ SPEED+=0.05; applySpeed(); }
   else if (e.key==='['){ SPEED-=0.05; applySpeed(); }
-  else if (e.key==='ArrowRight'){ v.currentTime=Math.min((v.duration||171), v.currentTime+5); }
+  else if (e.key==='ArrowRight'){ v.currentTime=Math.min((v.duration||167), v.currentTime+5); }
   else if (e.key==='ArrowLeft'){ v.currentTime=Math.max(0, v.currentTime-5); }
   else if (e.key==='ArrowDown'){ const n=SEGS.find(s=>s.t>v.currentTime+0.2); if(n) v.currentTime=n.t+0.05; }
   else if (e.key==='ArrowUp'){ const p=[...SEGS].reverse().find(s=>s.t<v.currentTime-0.2); if(p) v.currentTime=p.t+0.05; }
