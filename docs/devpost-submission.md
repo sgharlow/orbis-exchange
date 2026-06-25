@@ -30,10 +30,11 @@ Orbis Exchange is a persistent, single-world economic simulation.
   name inline whenever you want.
 - **A living world.** A 64×64 grid of resource cells evolves every 3-second tick
   by Conway-style cellular-automaton rules — regions bloom, spread, overcrowd, and
-  collapse. Scarcity is *emergent*, never authored. The field renders as a
-  single-hue density heatmap with bloom glow (brightness = abundance), with
-  on-demand reveal-layer chips per commodity, a "my cells" spotlight, hover
-  tooltips, and an always-visible Enter → Claim → Sell objective rail.
+  collapse. Scarcity is *emergent*, never authored. The field renders as a crisp
+  single-hue density heatmap (brightness = abundance) — scroll to zoom in on a
+  cell, then scroll or drag to pan — with on-demand reveal-layer chips per
+  commodity, a "my cells" spotlight, hover tooltips, and an always-visible
+  Enter → Claim → Sell objective rail.
 - **One global market.** Every commodity has a single order book with price-time
   priority. Each fill settles as one short, strongly-consistent transaction:
   debit buyer, credit seller, move inventory, close both orders, record the trade
@@ -45,11 +46,12 @@ Orbis Exchange is a persistent, single-world economic simulation.
 - **Claim & mine.** Click a cell to claim it (each player may own up to 12 cells);
   each tick it yields its resource into your inventory and depletes the land,
   feeding scarcity back into prices.
-- **AI vs human, one ledger.** Algorithmic agents (market-maker, momentum, value,
-  scout, and a cross-commodity arbitrage bot) are first-class players that trade
-  through the identical order path you do, at zero inference cost. They keep the
-  world liquid and alive — and they're the opponent. One net-worth leaderboard
-  ranks everyone.
+- **AI vs human, one ledger.** Every bot is a first-class player trading through
+  the identical order path you do, at zero inference cost. Market-makers and a
+  liquidity "pulse" keep the book two-sided and the tape warm even in a sparse
+  room; momentum, value, and a cross-commodity arbitrage bot are the opponents
+  you actually race. One net-worth leaderboard ranks you against those strategic
+  bots — the liquidity layer runs the market from behind the scenes.
 
 The screen is one world, two panels: the evolving map on the left and the moving
 market on the right are visibly the same ledger seen two ways.
@@ -90,15 +92,15 @@ reconciliation pass. Orbis is that proof you can click on.
   `UPDATE players SET credits = credits - cost WHERE credits >= cost`) instead of
   `SELECT … FOR UPDATE`. Money is `BIGINT`; all money math runs in SQL.
 - **Frontend: Next.js (App Router) on Vercel** — a canvas world view that renders
-  density as a single-hue heatmap with bloom glow, a read-only order-book depth
-  display with one-click taker trading (Buy at best ask / Sell at best bid,
-  quantity auto-bounded so orders always fill), and Server-Sent Events
+  density as a crisp single-hue heatmap (pixel-accurate at any zoom), a read-only
+  order-book depth display with one-click taker trading (pick a size, Buy at best
+  ask / Sell at best bid, quantity auto-bounded so orders always fill), and Server-Sent Events
   (`/api/stream`) pushing tick / world-delta / market events, with a poll fallback.
 - **Simulation + agent worker (off-Vercel)** — the heartbeat: each tick runs the
   CA in memory, mines owned cells, matches + settles crossing orders, and
   **persists only deltas**. In the cloud this is a scheduled invocation.
 - **Monorepo:** pnpm workspaces (`apps/web`, `apps/worker`, `packages/db`),
-  TypeScript end to end, 135 tests (db 54 · web 36 · worker 45 — CA rules,
+  TypeScript end to end, 143 tests (db 55 · web 36 · worker 52 — CA rules,
   settlement, matching, mining, claims, agents, SSE, single-flight scheduling),
   all green.
 
@@ -197,11 +199,14 @@ critical settlement path.
       confirm the attribution wording against the Official Rules, then add the live
       URL here. This is nearly-free points; don't skip it.
 
-> Status (updated 2026-06-22): the game is feature-complete, tested (135 green —
-> db 54 · web 36 · worker 45), and **deployed live** at
-> https://orbis-exchange.vercel.app on Aurora DSQL. Production was re-seeded clean
-> on 2026-06-22 (14 agents at ~1.5M baseline, empty field) and the worker
-> `orbis-heartbeat` (rate(1 min) → orbis-tick) is **enabled — the world is
-> advancing**. The site is public (no login wall) and auto-joins visitors as
-> guests. Remaining before submit are all user-driven: **storage screenshots**,
-> multi-region capture, and the **demo video**.
+> Status (updated 2026-06-24): the game is feature-complete, tested (143 green —
+> db 55 · web 36 · worker 52), and **deployed live** at
+> https://orbis-exchange.vercel.app on Aurora DSQL. The roster is **18 bots** — a
+> per-commodity liquidity "pulse" plus market-makers and a mining scout run the
+> market off the board, so the leaderboard shows the **9 strategic opponents**
+> (momentum / value / arb). Production is re-seeded clean to the ~1.5M baseline and
+> the worker `orbis-heartbeat` (rate(1 min) → orbis-tick) is **enabled — the world
+> is advancing**. The site is public (no login wall) and auto-joins visitors as
+> guests. **Storage screenshots are DONE** (`docs/gallery/orbis-dsql-{us-east-1,us-west-2}.jpg`,
+> also spliced into the demo video). Remaining before submit: the **demo-video
+> voiceover** and the **Devpost form**.

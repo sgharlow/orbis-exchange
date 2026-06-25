@@ -3,7 +3,7 @@
 > QA pass of `orbis-exchange-spec.md` (the build contract) vs the current
 > implementation, with all remaining work prioritized into a dated roadmap.
 > Rebaselined **2026-06-12** (AI cold-start fix); **re-confirmed live 2026-06-22**:
-> `pnpm -r test` = **135 green** — db 54 + web 36 + worker 45; `pnpm -r lint`
+> `pnpm -r test` = **143 green** — db 55 + web 36 + worker 52; `pnpm -r lint`
 > clean; `next build` exit 0; Lambda
 > bundle builds + smokes. Implementation plan:
 > `docs/superpowers/plans/2026-06-11-complete-hackathon-entry.md` (Part A
@@ -173,7 +173,7 @@ market/ledger core to save time.
 
 ## Completed (verified live 2026-06-11)
 
-- Phases 1–3 (§13) feature-complete; 104 tests green at the 6-11 snapshot (now **135**), lint clean.
+- Phases 1–3 (§13) feature-complete; 104 tests green at the 6-11 snapshot (now **143**), lint clean.
 - 2026-06-10 P1 game-completeness arc: investment/extraction upgrade
   (migration 0003), player dashboard (`/api/me`), leaderboard on `/world`,
   cell secondary market (migration 0004), `arb` agent.

@@ -66,7 +66,7 @@ That's the loop. Everything else is strategy.
 depleted region — dim cells fade toward the background · ③ the density scale
 (scarce → abundant) and your-cell / for-sale keys*
 
-The field is a **single-hue cyan heatmap with a bloom glow**: brightness is
+The field is a **crisp single-hue cyan heatmap**: brightness is
 abundance, full stop. The four commodities don't each get their own colour —
 instead, **reveal-layer chips** let you light one commodity's cells at a time,
 and the **"my cells" spotlight** dims the field down to just your claimed cells.
@@ -106,10 +106,11 @@ tape — recent trades*
 - There is **one market** — one order book per commodity, shared by every
   human and every bot.
 - You trade as a **market taker**: **Buy** executes against the best ask,
-  **Sell** against the best bid. **There is no price field** — and no quantity
-  to second-guess either. The amount is **auto-bounded to what's actually
-  executable** (your credits, your holdings, the available depth), so your
-  orders **always fill fully and never rest or fail**.
+  **Sell** against the best bid. **There is no price field** — pick a size with
+  the quick chips (**1 / 5 / 25 / max**) and tap Buy or Sell. The amount is
+  **auto-bounded to what's actually executable** (your credits, your holdings,
+  the available depth), so your orders **always fill fully and never rest or
+  fail**. (Limit orders live behind an "advanced" link if you'd rather rest one.)
 - A button **disables with a plain reason** when you can't act — "no ore",
   "need credits", "no buyers" — so you always know why.
 - The order book itself is a **read-only depth display** of the AI

@@ -16,7 +16,7 @@
 | Area | State | Evidence |
 |---|---|---|
 | App code (spec §3–§14, less deliberate cuts) | ✅ feature-complete on `main` | git history |
-| Test suite | ✅ **135 green** (db 54 · web 36 · worker 45) | `pnpm -r test` |
+| Test suite | ✅ **143 green** (db 55 · web 36 · worker 52) | `pnpm -r test` |
 | Lint (3 packages) · `next build` · Lambda bundle | ✅ clean | `pnpm -r lint` / `next build` / `pnpm --filter @orbis/worker bundle` |
 | **Aurora DSQL cluster** | ✅ **ACTIVE**, deletion-protected, migrated 0001–0004 + seeded | `aws dsql get-cluster` |
 | **Worker Lambda `orbis-tick`** | ✅ Active (nodejs22) — **unscheduled by design → $0** | `aws lambda get-function-configuration` |
@@ -46,12 +46,12 @@ Vercel → Project → Settings → **Spend Management** → auto-pause (~$20). 
 EventBridge Scheduler **`orbis-heartbeat`** (`rate(1 minute)` → `orbis-tick`, role `orbis-scheduler`) is **ENABLED**. Live-verified: world advanced gen 64 → 87 → 99 → 123… at **~16/min** (clean, continuous). **Roll back instantly:** `aws scheduler delete-schedule --name orbis-heartbeat --region us-east-1` (and `aws iam delete-role-policy --role-name orbis-scheduler --policy-name invoke-orbis-tick; aws iam delete-role --role-name orbis-scheduler`). **Cost:** ≈ $13/mo Lambda (AWS credits; $10 budget alerts). **Tear down after capture if conserving.** Monitor: `aws logs tail /aws/lambda/orbis-tick --follow --region us-east-1`.
 
 ### 3c. Scout runaway — ✅ CLOSED by a hard 12-cell cap (2026-06-22)
-The `scout-r0` net-worth runaway (claim-only → quadratic land-grab → billions over hours) is now **eliminated for all players, not merely slowed**: **each player may own at most 12 cells**, enforced race-safe inside both `claimCell` and `buyListedCell` ("cell limit reached (12)…"). Agents were already capped at 5; the new cap bounds humans too, so the unbounded snowball is closed and no reset-before-record dance is required.
+The `scout-r0` net-worth runaway (claim-only → quadratic land-grab → billions over hours) is now **eliminated for all players, not merely slowed**: **each player may own at most 12 cells**, enforced race-safe inside both `claimCell` and `buyListedCell` ("cell limit reached (12)…"). Agents were already capped at 5; the new cap bounds humans too, so the unbounded *land-grab* snowball is closed. (Separately, the scout's *mining* net-worth runaway is closed by moving makers/pulse/scout off the leaderboard — `kind='market'` — §3b. A re-seed right before recording is still recommended to clear accumulated guests and give a pristine field.)
 
 **History (now superseded):** the earlier Design B / Tier 1 approach (2026-06-20) made the scout a bounded supplier (cap 5, passive selling) which only held for ~80 gens after a re-seed — gen-269 re-checks still showed scout-r0 ~1.39× ahead. The 12-cell cap supersedes that caveat; the "greatly reduced but not gone" wording no longer applies.
 
-### 3b. Re-seed the demo world for a clean leaderboard — ✅ DONE 2026-06-22 (full fresh re-seed)
-The production world was **re-seeded clean 2026-06-22**: **14 agents reset to a ~1.5M baseline**, empty field, fresh prices. Worker `orbis-heartbeat` (`rate(1 minute)` → `orbis-tick`) is ENABLED and the world is advancing. (Earlier 2026-06-19 re-seed brought agents to 1.0M parity / gen 0; this newer clean re-seed is the current live state.) With the 12-cell cap in place (§3c), the leaderboard stays a tight competitive AI-vs-human race and **no reset-before-record is needed**. The earlier scout-r0 runaway / stale-credit concern is **resolved**.
+### 3b. Re-seed the demo world for a clean leaderboard — re-seed RIGHT BEFORE recording
+The bot economy is an **18-bot roster**: a per-commodity liquidity **pulse** + market-makers + a mining **scout** are `kind='market'` and run the market **off the leaderboard**, so the board shows the **9 strategic opponents** (momentum / value / arb) at the ~1.5M baseline. Worker `orbis-heartbeat` (`rate(1 minute)` → `orbis-tick`) is ENABLED and the world is advancing. The earlier **scout-r0 runaway is resolved by the off-board reclassification** — the 12-cell cap alone did *not* hold it long-run. Because the public site keeps accruing guests, **do re-seed right before recording** (`pnpm db:reseed-live`, ~90s) and **join as your demo player after** it finishes.
 
 ### Settlement mechanic — ✅ live-verified 2026-06-19
 Join → market Buy on `ore` (taker, at the best ask, quantity auto-bounded to what's executable) → **filled at 102**, buyer credits 10000→9898, inventory +1 ore, trade on the tape — the strongly-consistent settlement works end-to-end on live DSQL. (Test player removed afterward.)

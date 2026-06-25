@@ -74,7 +74,7 @@ DATABASE_URL=postgres://orbis:orbis@localhost:5434/orbis pnpm --filter @orbis/wo
 
 Open **http://localhost:3000** — you're auto-joined as a guest and redirected to
 `/world`; click a cell to claim it (up to 12 cells per player). Tests: `pnpm -r test`
-(needs Docker up) — **135 green** (db 54 · web 36 · worker 45). Cloud (Aurora DSQL +
+(needs Docker up) — **143 green** (db 55 · web 36 · worker 52). Cloud (Aurora DSQL +
 Vercel): `docs/superpowers/runbooks/phase-0-cloud-provisioning.md`.
 
 ## Stack
