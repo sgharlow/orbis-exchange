@@ -38,7 +38,9 @@ async function reset(): Promise<void> {
     const humans = await pool.query("DELETE FROM players WHERE kind = 'human'");
     console.log("human players removed:", humans.rowCount);
 
-    const ag = await pool.query("UPDATE players SET credits = $1::bigint WHERE kind = 'agent'", [
+    // Reset both the strategic opponents ('agent') and the infrastructure liquidity
+    // bots ('market' — makers + pulse) so the whole bot economy returns to baseline.
+    const ag = await pool.query("UPDATE players SET credits = $1::bigint WHERE kind IN ('agent', 'market')", [
       AGENT_CREDITS,
     ]);
     console.log("agents reset to baseline credits:", ag.rowCount);

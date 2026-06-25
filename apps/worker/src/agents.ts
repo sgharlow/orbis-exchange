@@ -5,7 +5,7 @@
 // as humans. Zero inference cost by design; they exist to keep the market liquid
 // during a sparse demo and to be the opponent.
 
-export type Strategy = "maker" | "momentum" | "value" | "scout" | "arb";
+export type Strategy = "maker" | "momentum" | "value" | "scout" | "arb" | "pulse";
 
 export interface AgentParams {
   commodity: string;
@@ -13,8 +13,10 @@ export interface AgentParams {
   margin?: number; // maker: credits offset from the reference price
   band?: number; // value: fractional deviation from the mean to act on
   lookback?: number; // momentum/value: trades to consider
-  anchor?: number; // momentum: price the flat/cold-start probe reverts toward (default 100)
+  anchor?: number; // momentum/pulse: price the probe reverts toward (default 100)
   region?: string; // scout: which region to claim cells in (default r0)
+  invTarget?: number; // pulse: inventory the conserved trader rebalances toward (default 1000)
+  invBand?: number; // pulse: deadband around invTarget before inventory forces a side (default 50)
 }
 
 export interface AgentContext {
@@ -87,6 +89,32 @@ export function decide(strategy: Strategy, params: AgentParams, ctx: AgentContex
       if (ctx.bestBid !== null && canSell(ctx, size)) {
         out.push({ commodity, side: "sell", price: ctx.bestBid, qty: size });
       }
+    }
+    return out;
+  }
+
+  if (strategy === "pulse") {
+    // Baseline liquidity / noise trader. Every tick it CROSSES the spread by `size`,
+    // taking a real resting order so a trade always prints — this keeps the trade tape
+    // warm (the signal-gated takers, momentum/value/arb, never re-freeze) and gives a
+    // sparse or unattended world constant, visible buy/sell activity even with a handful
+    // of real players. It is CONSERVED, so it round-trips instead of running away: it
+    // leans to restore its inventory toward `invTarget` and, when inventory is neutral,
+    // to pull price back toward `anchor`. Only ever takes an order it can actually back.
+    const anchor = params.anchor ?? 100;
+    const target = params.invTarget ?? 1000;
+    const dead = params.invBand ?? 50;
+    let side: "buy" | "sell";
+    if (ctx.inventory > target + dead) side = "sell";
+    else if (ctx.inventory < target - dead) side = "buy";
+    else side = (ctx.lastPrice ?? anchor) > anchor ? "sell" : "buy";
+
+    if (side === "buy") {
+      if (ctx.bestAsk !== null && canBuy(ctx, ctx.bestAsk, size)) {
+        out.push({ commodity, side: "buy", price: ctx.bestAsk, qty: size });
+      }
+    } else if (ctx.bestBid !== null && canSell(ctx, size)) {
+      out.push({ commodity, side: "sell", price: ctx.bestBid, qty: size });
     }
     return out;
   }

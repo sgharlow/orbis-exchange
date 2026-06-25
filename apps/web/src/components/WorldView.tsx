@@ -150,14 +150,18 @@ export function WorldView({
       offctx.putImageData(img, 0, 0);
 
       ctx.clearRect(0, 0, dim, dim);
-      ctx.imageSmoothingEnabled = true;
+      // Crisp, pixel-accurate upscale: each cell is a clean square so the cell you
+      // hover/claim is unambiguous (no bilinear smear). image-rendering:pixelated on
+      // the canvas keeps the CSS-transform zoom crisp on top of this.
+      ctx.imageSmoothingEnabled = false;
       ctx.drawImage(off, 0, 0, dim, dim);
 
-      // Bloom: an additive, blurred copy makes dense cells emit light.
+      // Luminance pop: a pixel-aligned (NOT blurred) additive pass so dense cells
+      // genuinely glow — brightness = abundance — while edges stay sharp. Additive on
+      // a near-black field leaves scarce cells dark and lifts only the bright ones.
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
-      ctx.globalAlpha = 0.5;
-      ctx.filter = "blur(6px)";
+      ctx.globalAlpha = 0.35;
       ctx.drawImage(off, 0, 0, dim, dim);
       ctx.restore();
 
@@ -255,25 +259,35 @@ export function WorldView({
 
     draw();
 
-    // Mouse-wheel zoom, centered on the cursor so the cell under the pointer stays put
-    // while it grows — the clearest way to see which cell you're about to claim. Native
-    // listener (not React onWheel) so we can preventDefault and stop the page scrolling.
+    // Wheel does double duty (map convention): a pinch-zoom (trackpads send ctrlKey)
+    // always zooms, and so does a plain scroll at base zoom — the entry gesture. But
+    // once you're zoomed IN, a plain scroll PANS the map so you can move around it
+    // (two-finger scroll on a trackpad, wheel on a mouse). Native listener (not React
+    // onWheel) so we can preventDefault and stop the page from scrolling.
     const onWheel = (e: WheelEvent) => {
       const wrap = wrapRef.current;
       if (!wrap) return;
       e.preventDefault();
       const r = wrap.getBoundingClientRect();
       const D = r.width;
-      const px = e.clientX - r.left;
-      const py = e.clientY - r.top;
       const cur = viewRef.current;
-      const nz = Math.min(MAX_Z, Math.max(MIN_Z, cur.z * Math.exp(-e.deltaY * 0.0015)));
-      // World-local point under the cursor before zoom; keep it fixed after.
-      const ux = (px - cur.tx) / cur.z;
-      const uy = (py - cur.ty) / cur.z;
-      const ntx = clampPan(px - ux * nz, nz, D);
-      const nty = clampPan(py - uy * nz, nz, D);
-      viewRef.current = { z: nz, tx: ntx, ty: nty };
+      if (e.ctrlKey || cur.z <= 1) {
+        // Cursor-centered zoom: keep the cell under the pointer fixed as it grows —
+        // the clearest way to see which cell you're about to claim.
+        const px = e.clientX - r.left;
+        const py = e.clientY - r.top;
+        const nz = Math.min(MAX_Z, Math.max(MIN_Z, cur.z * Math.exp(-e.deltaY * 0.0015)));
+        const ux = (px - cur.tx) / cur.z;
+        const uy = (py - cur.ty) / cur.z;
+        const ntx = clampPan(px - ux * nz, nz, D);
+        const nty = clampPan(py - uy * nz, nz, D);
+        viewRef.current = { z: nz, tx: ntx, ty: nty };
+      } else {
+        // Pan: move the field with the scroll, clamped so it stays covering the viewport.
+        const ntx = clampPan(cur.tx - e.deltaX, cur.z, D);
+        const nty = clampPan(cur.ty - e.deltaY, cur.z, D);
+        viewRef.current = { z: cur.z, tx: ntx, ty: nty };
+      }
       setView(viewRef.current);
     };
     canvas.addEventListener("wheel", onWheel, { passive: false });
@@ -548,7 +562,7 @@ export function WorldView({
             onPointerUp();
             setHover(null);
           }}
-          aria-label={`Living resource field for region ${region}, ${size} by ${size} cells. Click a cell to claim it. Scroll to zoom; drag to pan when zoomed in.`}
+          aria-label={`Living resource field for region ${region}, ${size} by ${size} cells. Click a cell to claim it. Scroll to zoom in; once zoomed, scroll or drag to pan. Ctrl-scroll (or pinch) to zoom.`}
           style={{
             width: "100%",
             height: "100%",
@@ -558,6 +572,7 @@ export function WorldView({
             transform: `translate(${view.tx}px, ${view.ty}px) scale(${view.z})`,
             transformOrigin: "0 0",
             willChange: "transform",
+            imageRendering: "pixelated",
           }}
         />
         {hover && (
@@ -632,7 +647,7 @@ export function WorldView({
             </button>
           </span>
         ) : (
-          <span className="claim-hint"><b>click any cell to claim it</b> (500 cr) · it mines every tick · scroll to zoom, drag to pan · click a cell you own to list the plot</span>
+          <span className="claim-hint"><b>click any cell to claim it</b> (500 cr) · it mines every tick · scroll to zoom in, then scroll or drag to pan · click a cell you own to list the plot</span>
         )}
       </div>
 

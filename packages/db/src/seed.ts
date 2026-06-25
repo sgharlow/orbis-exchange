@@ -14,30 +14,45 @@ const COMMODITIES = ["ore", "energy", "biomass", "rare"] as const;
 // first tick.
 const AGENT_CREDITS = 1_000_000;
 const AGENT_INVENTORY = 5_000;
+// kind 'market' = infrastructure liquidity (makers + the pulse trader): they keep the
+// book two-sided and the tape warm, but they are NOT competitors, so the leaderboard
+// hides them (getLeaderboard excludes kind='market'). kind 'agent' = the opponents you
+// can actually out-trade (momentum/value/scout/arb), which stay on the board.
 const AGENTS = [
-  { id: "a0000000-0000-0000-0000-0000000000a1", handle: "mm-ore", strategy: "maker", params: { commodity: "ore", size: 5, margin: 2 } },
-  { id: "a0000000-0000-0000-0000-0000000000a2", handle: "mm-energy", strategy: "maker", params: { commodity: "energy", size: 5, margin: 2 } },
-  { id: "a0000000-0000-0000-0000-0000000000a3", handle: "mm-biomass", strategy: "maker", params: { commodity: "biomass", size: 5, margin: 2 } },
-  { id: "a0000000-0000-0000-0000-0000000000a4", handle: "mm-rare", strategy: "maker", params: { commodity: "rare", size: 5, margin: 2 } },
-  { id: "a0000000-0000-0000-0000-0000000000a5", handle: "momentum-ore", strategy: "momentum", params: { commodity: "ore", size: 3, lookback: 5 } },
-  { id: "a0000000-0000-0000-0000-0000000000a6", handle: "value-ore", strategy: "value", params: { commodity: "ore", size: 3, band: 0.04, lookback: 10 } },
-  { id: "a0000000-0000-0000-0000-0000000000a7", handle: "scout-r0", strategy: "scout", params: { commodity: "ore", size: 1, region: "r0" } },
-  { id: "a0000000-0000-0000-0000-0000000000a8", handle: "arb-bot", strategy: "arb", params: { commodity: "ore", size: 3, lookback: 10 } },
-  { id: "a0000000-0000-0000-0000-0000000000a9", handle: "momentum-energy", strategy: "momentum", params: { commodity: "energy", size: 3, lookback: 5 } },
-  { id: "a0000000-0000-0000-0000-0000000000aa", handle: "momentum-biomass", strategy: "momentum", params: { commodity: "biomass", size: 3, lookback: 5 } },
-  { id: "a0000000-0000-0000-0000-0000000000ab", handle: "momentum-rare", strategy: "momentum", params: { commodity: "rare", size: 3, lookback: 5 } },
-  { id: "a0000000-0000-0000-0000-0000000000ac", handle: "value-energy", strategy: "value", params: { commodity: "energy", size: 3, band: 0.04, lookback: 10 } },
-  { id: "a0000000-0000-0000-0000-0000000000ad", handle: "value-biomass", strategy: "value", params: { commodity: "biomass", size: 3, band: 0.04, lookback: 10 } },
-  { id: "a0000000-0000-0000-0000-0000000000ae", handle: "value-rare", strategy: "value", params: { commodity: "rare", size: 3, band: 0.04, lookback: 10 } },
+  { id: "a0000000-0000-0000-0000-0000000000a1", handle: "mm-ore", kind: "market", strategy: "maker", params: { commodity: "ore", size: 5, margin: 2 } },
+  { id: "a0000000-0000-0000-0000-0000000000a2", handle: "mm-energy", kind: "market", strategy: "maker", params: { commodity: "energy", size: 5, margin: 2 } },
+  { id: "a0000000-0000-0000-0000-0000000000a3", handle: "mm-biomass", kind: "market", strategy: "maker", params: { commodity: "biomass", size: 5, margin: 2 } },
+  { id: "a0000000-0000-0000-0000-0000000000a4", handle: "mm-rare", kind: "market", strategy: "maker", params: { commodity: "rare", size: 5, margin: 2 } },
+  { id: "a0000000-0000-0000-0000-0000000000a5", handle: "momentum-ore", kind: "agent", strategy: "momentum", params: { commodity: "ore", size: 3, lookback: 5 } },
+  { id: "a0000000-0000-0000-0000-0000000000a6", handle: "value-ore", kind: "agent", strategy: "value", params: { commodity: "ore", size: 3, band: 0.04, lookback: 10 } },
+  { id: "a0000000-0000-0000-0000-0000000000a7", handle: "scout-r0", kind: "agent", strategy: "scout", params: { commodity: "ore", size: 1, region: "r0" } },
+  { id: "a0000000-0000-0000-0000-0000000000a8", handle: "arb-bot", kind: "agent", strategy: "arb", params: { commodity: "ore", size: 3, lookback: 10 } },
+  { id: "a0000000-0000-0000-0000-0000000000a9", handle: "momentum-energy", kind: "agent", strategy: "momentum", params: { commodity: "energy", size: 3, lookback: 5 } },
+  { id: "a0000000-0000-0000-0000-0000000000aa", handle: "momentum-biomass", kind: "agent", strategy: "momentum", params: { commodity: "biomass", size: 3, lookback: 5 } },
+  { id: "a0000000-0000-0000-0000-0000000000ab", handle: "momentum-rare", kind: "agent", strategy: "momentum", params: { commodity: "rare", size: 3, lookback: 5 } },
+  { id: "a0000000-0000-0000-0000-0000000000ac", handle: "value-energy", kind: "agent", strategy: "value", params: { commodity: "energy", size: 3, band: 0.04, lookback: 10 } },
+  { id: "a0000000-0000-0000-0000-0000000000ad", handle: "value-biomass", kind: "agent", strategy: "value", params: { commodity: "biomass", size: 3, band: 0.04, lookback: 10 } },
+  { id: "a0000000-0000-0000-0000-0000000000ae", handle: "value-rare", kind: "agent", strategy: "value", params: { commodity: "rare", size: 3, band: 0.04, lookback: 10 } },
+  // Baseline liquidity/noise trader per commodity — guarantees regular two-sided
+  // demand with a handful of (or zero) real players. invTarget == AGENT_INVENTORY so it
+  // starts inventory-neutral and oscillates price around the anchor; conserved, so no runaway.
+  { id: "a0000000-0000-0000-0000-0000000000b1", handle: "pulse-ore", kind: "market", strategy: "pulse", params: { commodity: "ore", size: 4, anchor: 100, invTarget: 5000, invBand: 200 } },
+  { id: "a0000000-0000-0000-0000-0000000000b2", handle: "pulse-energy", kind: "market", strategy: "pulse", params: { commodity: "energy", size: 4, anchor: 100, invTarget: 5000, invBand: 200 } },
+  { id: "a0000000-0000-0000-0000-0000000000b3", handle: "pulse-biomass", kind: "market", strategy: "pulse", params: { commodity: "biomass", size: 4, anchor: 100, invTarget: 5000, invBand: 200 } },
+  { id: "a0000000-0000-0000-0000-0000000000b4", handle: "pulse-rare", kind: "market", strategy: "pulse", params: { commodity: "rare", size: 4, anchor: 100, invTarget: 5000, invBand: 200 } },
 ] as const;
 
 async function seedAgents(pool: pg.Pool): Promise<void> {
   for (const a of AGENTS) {
+    // DO UPDATE (not DO NOTHING) on the handle/kind so re-running the seed against an
+    // existing world brings the roster to current — notably flipping the makers to
+    // kind='market' so the leaderboard exclusion takes effect without a fresh world.
+    // Credits are left alone here (reset.ts owns balance resets).
     await pool.query(
       `INSERT INTO players (id, handle, kind, credits, home_region, created_at)
-         VALUES ($1, $2, 'agent', $3::bigint, 'us-east', now())
-         ON CONFLICT (id) DO NOTHING`,
-      [a.id, a.handle, AGENT_CREDITS]
+         VALUES ($1, $2, $3, $4::bigint, 'us-east', now())
+         ON CONFLICT (id) DO UPDATE SET handle = EXCLUDED.handle, kind = EXCLUDED.kind`,
+      [a.id, a.handle, a.kind, AGENT_CREDITS]
     );
     await pool.query(
       `INSERT INTO agents (player_id, strategy, params) VALUES ($1, $2, $3::jsonb)

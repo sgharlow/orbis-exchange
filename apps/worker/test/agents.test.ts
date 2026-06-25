@@ -115,6 +115,48 @@ describe("value", () => {
   });
 });
 
+describe("pulse (baseline liquidity / noise trader)", () => {
+  // Inventory at target (deadband neutral) so price-vs-anchor decides the side.
+  const neutral = { ...rich, inventory: 5000 };
+  const params = { commodity: "ore", size: 4, anchor: 100, invTarget: 5000, invBand: 200 };
+
+  it("buys the best ask when at/below the anchor (pulls price up, prints a trade)", () => {
+    const out = decide("pulse", params, { ...neutral, lastPrice: 100 });
+    expect(out).toEqual([{ commodity: "ore", side: "buy", price: 102, qty: 4 }]);
+  });
+
+  it("sells the best bid when above the anchor (pulls price down)", () => {
+    const out = decide("pulse", params, { ...neutral, lastPrice: 104 });
+    expect(out).toEqual([{ commodity: "ore", side: "sell", price: 98, qty: 4 }]);
+  });
+
+  it("is conserved: replenishes by buying when inventory is below target, even above anchor", () => {
+    const out = decide("pulse", params, { ...neutral, lastPrice: 130, inventory: 4000 });
+    expect(out).toEqual([{ commodity: "ore", side: "buy", price: 102, qty: 4 }]);
+  });
+
+  it("is conserved: distributes by selling when inventory is above target, even below anchor", () => {
+    const out = decide("pulse", params, { ...neutral, lastPrice: 70, inventory: 6000 });
+    expect(out).toEqual([{ commodity: "ore", side: "sell", price: 98, qty: 4 }]);
+  });
+
+  it("only takes a real resting order — no order when the cross side is empty", () => {
+    const out = decide("pulse", params, { ...neutral, lastPrice: 100, bestAsk: null });
+    expect(out).toEqual([]);
+  });
+
+  it("never proposes a buy it cannot fund", () => {
+    expect(decide("pulse", params, { ...neutral, lastPrice: 100, credits: 0 })).toEqual([]);
+  });
+
+  it("never proposes a sell it cannot back", () => {
+    // Tiny target so a near-empty inventory still lands in the neutral band and the
+    // price (above anchor) asks for a sell — which the inventory guard must veto.
+    const tiny = { commodity: "ore", size: 4, anchor: 100, invTarget: 2, invBand: 3 };
+    expect(decide("pulse", tiny, { ...neutral, lastPrice: 104, inventory: 1 })).toEqual([]);
+  });
+});
+
 describe("pickArb", () => {
   const mkts: ArbMarket[] = [
     { commodity: "ore", lastPrice: 80, bestBid: 79, bestAsk: 81, recentPrices: [100, 100, 100] }, // undervalued

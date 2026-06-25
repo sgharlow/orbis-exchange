@@ -3,6 +3,8 @@ import type { LeaderboardEntry } from "./types.js";
 
 // Net worth = credits + inventory valued at last market price (spec §4.3).
 // Commodities with no trade yet have a NULL last_price and contribute nothing.
+// kind='market' players (makers + the pulse liquidity trader) are infrastructure that
+// keeps the book liquid — not competitors — so they are excluded from the leaderboard.
 export async function getLeaderboard(pool: pg.Pool): Promise<LeaderboardEntry[]> {
   const { rows } = await pool.query<LeaderboardEntry>(
     `SELECT p.id, p.handle, p.kind,
@@ -10,6 +12,7 @@ export async function getLeaderboard(pool: pg.Pool): Promise<LeaderboardEntry[]>
        FROM players p
        LEFT JOIN inventory i ON i.player_id = p.id
        LEFT JOIN market_state ms ON ms.commodity = i.commodity
+      WHERE p.kind <> 'market'
       GROUP BY p.id, p.handle, p.kind, p.credits
       ORDER BY (p.credits + COALESCE(SUM(i.qty * ms.last_price), 0)) DESC, p.handle ASC
       LIMIT 100`

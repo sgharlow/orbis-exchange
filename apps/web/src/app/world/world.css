@@ -1060,6 +1060,94 @@ body {
   color: #5f7aa6;
 }
 
+/* quick-size chips: one-tap quantities so trading needs no typing */
+.qty-chips {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.qty-chip {
+  font: inherit;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  min-width: 2rem;
+  color: #aebbd6;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(120, 160, 220, 0.2);
+  border-radius: 6px;
+  padding: 0.3rem 0.45rem;
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+}
+.qty-chip:hover {
+  color: #eaf2ff;
+  border-color: rgba(56, 224, 245, 0.5);
+}
+.qty-chip[data-active="true"] {
+  color: #06080f;
+  background: #38e0f5;
+  border-color: #38e0f5;
+  font-weight: 600;
+}
+.qty-input {
+  font: inherit;
+  font-size: 0.9rem;
+  width: 4.2rem;
+  color: #eef3ff;
+  background: rgba(5, 9, 17, 0.7);
+  border: 1px solid rgba(120, 160, 220, 0.2);
+  border-radius: 6px;
+  padding: 0.3rem 0.45rem;
+  outline: none;
+  font-variant-numeric: tabular-nums;
+}
+.qty-input:focus {
+  border-color: rgba(96, 156, 240, 0.6);
+}
+
+/* plain-language trade preview (replaces the cryptic "buy up to N" line) */
+.ticket-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.72rem;
+  color: #aebbd6;
+  font-variant-numeric: tabular-nums;
+}
+.ticket-preview b {
+  color: #eef3ff;
+}
+.ticket-wallet {
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  color: #6f86b3;
+}
+
+/* advanced (limit) disclosure */
+.advanced {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.advanced-toggle {
+  margin-left: auto;
+  font: inherit;
+  font-size: 0.56rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #6f86b3;
+  background: none;
+  border: 0;
+  padding: 0.2rem 0;
+  cursor: pointer;
+  transition: color 0.12s;
+}
+.advanced-toggle:hover {
+  color: #9fe9f6;
+}
+
 /* market/limit mode toggle + open-orders list */
 .mode-toggle {
   display: flex;

@@ -37,6 +37,9 @@ export function MarketPanel({
   const [qty, setQty] = useState("1");
   const [busy, setBusy] = useState(false);
   const [mode, setMode] = useState<"market" | "limit">("market");
+  // Limit orders are power-user territory; keep them behind an "advanced" disclosure
+  // so a first-time player sees one-tap Buy/Sell and nothing else.
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [limitPrice, setLimitPrice] = useState("");
   const [openOrders, setOpenOrders] = useState<OpenOrder[]>([]);
   // Wallet snapshot from the dashboard's /api/me poll — used to bound trades so we
@@ -307,8 +310,13 @@ export function MarketPanel({
   const holding = wallet.holdings[commodity] ?? 0;
   const maxBuy = askPrice > 0 ? Math.min(Number(bestAsk!.qty_open), Math.floor(wallet.credits / askPrice)) : 0;
   const maxSell = bidPrice > 0 ? Math.min(Number(bestBid!.qty_open), holding) : 0;
-  const buyLabel = maxBuy >= 1 ? `Buy ${commodity}` : bestAsk ? "need credits" : "no offers";
-  const sellLabel = maxSell >= 1 ? `Sell ${commodity}` : holding < 1 ? `no ${commodity}` : "no buyers";
+  // What this tap will actually do, given the typed/chipped quantity — drives the
+  // price-on-button labels and the plain-language preview line.
+  const wantQty = Math.max(1, Math.floor(Number(qty)) || 1);
+  const buyQty = Math.min(wantQty, maxBuy);
+  const sellQty = Math.min(wantQty, maxSell);
+  const buyLabel = maxBuy >= 1 ? `Buy ${buyQty} · ${formatCredits(askPrice)} cr` : bestAsk ? "need credits" : "no offers";
+  const sellLabel = maxSell >= 1 ? `Sell ${sellQty} · ${formatCredits(bidPrice)} cr` : holding < 1 ? `no ${commodity}` : "no buyers";
 
   return (
     <section className="market" aria-label="Market panel">
@@ -392,31 +400,35 @@ export function MarketPanel({
       <div className="ticket">
         {handle ? (
           <>
-            <div className="mode-toggle" role="group" aria-label="Order type">
-              <button data-active={mode === "market"} onClick={() => setMode("market")}>
-                market
-              </button>
-              <button
-                data-active={mode === "limit"}
-                onClick={() => {
-                  setMode("limit");
-                  if (!limitPrice) setLimitPrice(market.last_price ?? String(askPrice || bidPrice || ""));
-                }}
-              >
-                limit
-              </button>
-            </div>
+            {/* Quick-size chips + a small field: the common case needs no typing. */}
             <div className="trade-row">
-              <label className="field qty-field">
-                <span>quantity</span>
+              <div className="qty-chips" role="group" aria-label="Quantity">
+                {[1, 5, 25].map((nq) => (
+                  <button
+                    key={nq}
+                    className="qty-chip"
+                    data-active={wantQty === nq}
+                    onClick={() => setQty(String(nq))}
+                  >
+                    {nq}
+                  </button>
+                ))}
+                <button
+                  className="qty-chip"
+                  onClick={() => setQty("999999")}
+                  title="Trade the most you can right now"
+                >
+                  max
+                </button>
                 <input
+                  className="qty-input"
                   inputMode="numeric"
                   value={qty}
                   onChange={(e) => setQty(e.target.value)}
                   aria-label="quantity"
                 />
-              </label>
-              {mode === "limit" ? (
+              </div>
+              {showAdvanced && mode === "limit" ? (
                 <label className="field">
                   <span>your price</span>
                   <input
@@ -433,7 +445,20 @@ export function MarketPanel({
                 </div>
               )}
             </div>
-            {mode === "market" ? (
+
+            {showAdvanced && mode === "limit" ? (
+              <>
+                <div className="ticket-actions">
+                  <button className="btn btn-buy" disabled={busy} onClick={() => placeLimit("buy")}>
+                    Buy @ {limitPrice || "—"}
+                  </button>
+                  <button className="btn btn-sell" disabled={busy} onClick={() => placeLimit("sell")}>
+                    Sell @ {limitPrice || "—"}
+                  </button>
+                </div>
+                <div className="ticket-who">limit orders rest on the book until they fill · you’re {handle}</div>
+              </>
+            ) : (
               <>
                 <div className="ticket-actions">
                   <button
@@ -453,23 +478,57 @@ export function MarketPanel({
                     {sellLabel}
                   </button>
                 </div>
-                <div className="ticket-who">
-                  buy up to <b>{maxBuy}</b> · sell up to <b>{maxSell}</b> · you’re {handle}
+                <div className="ticket-preview">
+                  {maxBuy >= 1 ? (
+                    <span>
+                      buy {buyQty} {commodity} ≈ <b>{formatCredits(buyQty * askPrice)}</b> cr
+                    </span>
+                  ) : maxSell >= 1 ? (
+                    <span>
+                      sell {sellQty} {commodity} ≈ <b>{formatCredits(sellQty * bidPrice)}</b> cr
+                    </span>
+                  ) : (
+                    <span>claim &amp; mine a cell to get {commodity} to sell</span>
+                  )}
+                  <span className="ticket-wallet">
+                    you hold {holding} {commodity} · {formatCredits(wallet.credits)} cr
+                  </span>
                 </div>
-              </>
-            ) : (
-              <>
-                <div className="ticket-actions">
-                  <button className="btn btn-buy" disabled={busy} onClick={() => placeLimit("buy")}>
-                    Buy @ {limitPrice || "—"}
-                  </button>
-                  <button className="btn btn-sell" disabled={busy} onClick={() => placeLimit("sell")}>
-                    Sell @ {limitPrice || "—"}
-                  </button>
-                </div>
-                <div className="ticket-who">limit orders rest on the book until they fill · you’re {handle}</div>
               </>
             )}
+
+            {/* Advanced disclosure: limit orders rest on the book — hidden by default. */}
+            <div className="advanced">
+              {showAdvanced && (
+                <div className="mode-toggle" role="group" aria-label="Order type">
+                  <button data-active={mode === "market"} onClick={() => setMode("market")}>
+                    market
+                  </button>
+                  <button
+                    data-active={mode === "limit"}
+                    onClick={() => {
+                      setMode("limit");
+                      if (!limitPrice) setLimitPrice(market.last_price ?? String(askPrice || bidPrice || ""));
+                    }}
+                  >
+                    limit
+                  </button>
+                </div>
+              )}
+              <button
+                className="advanced-toggle"
+                onClick={() => {
+                  if (showAdvanced) {
+                    setShowAdvanced(false);
+                    setMode("market");
+                  } else {
+                    setShowAdvanced(true);
+                  }
+                }}
+              >
+                {showAdvanced ? "← simple" : "advanced · limit orders"}
+              </button>
+            </div>
             {openOrders.length > 0 && (
               <div className="orders" aria-label="Your open orders">
                 <div className="orders-h">your open orders</div>

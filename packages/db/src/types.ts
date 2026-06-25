@@ -1,8 +1,12 @@
 // Money fields (credits, price, qty) are BIGINT in SQL and surface as string in TS.
+// 'market' = infrastructure liquidity bots (makers + pulse), excluded from the
+// leaderboard; 'agent' = the strategic opponents shown on it; 'human' = real players.
+export type PlayerKind = "human" | "agent" | "market";
+
 export interface PlayerRow {
   id: string;
   handle: string;
-  kind: "human" | "agent";
+  kind: PlayerKind;
   credits: string;
   home_region: string;
   created_at: string;
@@ -19,6 +23,6 @@ export interface MarketStateRow {
 export interface LeaderboardEntry {
   id: string;
   handle: string;
-  kind: "human" | "agent";
+  kind: PlayerKind;
   net_worth: string;
 }
