@@ -53,53 +53,57 @@ leaderboard + "out-trade the machine" → close on Aurora DSQL + the consistency
 
 | # | ~Time | Screen / action | Voiceover |
 |---|-------|-----------------|-----------|
-| 1 | 0:00–0:15 | `/world` full screen — already auto-joined (no login). Let the **crisp cyan density heatmap** visibly tick/evolve. **Scroll to zoom in** on a bright bloom of cells, then **scroll/drag to pan** across it. | "One living world. A grid of resources that grows, spreads, and collapses on its own — no script, just rules. Brightness is abundance — the field you see *is* the data, evolving in real time. I can zoom right into it." |
+| 1 | 0:00–0:15 | `/world` full screen — already auto-joined (no login). Let the **crisp cyan density heatmap** visibly tick/evolve. **Scroll to zoom in** on a bright bloom of cells, then **scroll/drag to pan** across it. | "One living world — a grid of resources that grows, spreads, and collapses on its own. No script, just rules: every few seconds the whole field steps forward, dense regions bloom and crowded ones burn out, so scarcity emerges on its own. Brightness is abundance — what you see *is* the data itself, evolving in real time. And I can zoom right in; every player is looking at the exact same world." |
 | 2 | 0:15–0:35 | Zoom back out. Hover a cell (inline tooltip: coords / commodity / density); click a **bright cell** → white outline + claim toast. Tap **"my cells"** so the field dims to just yours. | "No signup — I'm already in, and I can rename myself anytime. I claim a piece of it: that cell is mine now — every few seconds it mines its resource into my inventory and depletes the land. Scarcity is emergent: where the land thins, prices are about to move." |
-| 3 | 0:35–0:55 | Look at the **market panel** (right): last price, the order-book depth (red asks / green bids), the trade tape ticking. | "On the right is the other half of the same screen: one global market. One order book per commodity, price-time priority. The map and the book are the same ledger, seen two ways." |
-| 4 | 0:55–1:25 | In the ticket, tap a **quantity chip** (e.g. **5**), then hit **Buy** — the button reads the live price (`Buy 5 · 100 cr`). Fill toast appears; book depth drops; last price updates; a new row hits the tape. | "Trading is one tap. I pick a size, and Buy — it takes the best ask and settles instantly. No price to enter, nothing left resting. One short transaction debited me, paid the seller, moved the inventory, and recorded the trade — with the balance and inventory checks asserted *inside* that transaction." |
+| 3 | 0:35–0:55 | Look at the **market panel** (right): last price, the order-book depth (red asks / green bids), the trade tape ticking. | "On the right is the other half of the same screen: one global market — one order book per commodity, price-time priority. The map and the book are the same ledger, seen two ways: what your cells mine shows up here to sell." |
+| 4 | 0:55–1:25 | In the ticket, tap a **quantity chip** (e.g. **5**), then hit **Buy** — the button reads the live price (`Buy 5 · 100 cr`). Fill toast appears; book depth drops; last price updates; a new row hits the tape. | "Watch this. I pick a size and buy — it crosses a resting sell and settles instantly. No price to enter, nothing left resting. One short transaction debited me, paid the seller, moved the inventory, and recorded the trade, with the balance and inventory checks asserted *inside* that transaction — so it can never double-spend or oversell." |
 | 5 | 1:25–1:45 | Stay on the market; let the tape and price keep moving while you talk. | "Here's the twist: almost none of these orders are people. Market-maker and liquidity bots quote both sides every tick to keep the book alive — and momentum, value and arbitrage bots trade it as first-class players: same order book, same code path I just used, zero inference cost." |
-| 6 | 1:45–2:05 | Scroll to the **leaderboard** (below the panels). Ranked list, AI tags, your row highlighted. | "One leaderboard ranks the real competition — human and AI — by net worth: credits plus holdings at last price. Which comes down to one question. Can you out-trade the machine?" |
-| 7 | 2:05–2:35 | Cut to the **AWS Aurora DSQL console**: cluster overview / endpoint, then the multi-region **Peers** view (or a quick `players`/`trades` table peek). Then cut to `docs/architecture.png`. | "All of this rests on Amazon Aurora DSQL — the single source of truth. Strongly consistent, so no order can double-spend credits or sell the same unit twice, and there's no reconciliation pass, ever. Three runtimes share one ledger: the Next.js app on Vercel, the simulation heartbeat, and the agents." |
-| 8 | 2:35–2:50 | Hold on the diagram; highlight the multi-region note, then a quick cut back to `/world` evolving + title card "Orbis Exchange". | "And DSQL is active-active across regions by design — a player in Oregon and one in Virginia would trade on one consistent world, with zero coordination in our code. That's the million-scale story: not a benchmark, a guarantee. Orbis Exchange — one living world, one ledger, and a machine to beat." |
+| 6 | 1:45–2:05 | Scroll to the **leaderboard** (below the panels). Ranked list, AI tags, your row highlighted. | "One leaderboard ranks everyone — human and AI — by net worth: your credits plus what you're holding at the last price. The bots never sleep, so climbing it means beating them at their own game. Can you out-trade the machine?" |
+| 7 | 2:05–2:35 | Cut to the **AWS Aurora DSQL console**: cluster overview / endpoint, then the multi-region **Peers** view (or a quick `players`/`trades` table peek). Then cut to `docs/architecture.png`. | "All of this rests on Amazon Aurora DSQL — the single source of truth. Strongly consistent, with no reconciliation pass, ever. Three runtimes share one ledger: the Next.js app on Vercel, the simulation heartbeat, and the agent workers." |
+| 8 | 2:35–2:50 | Hold on the diagram; highlight the multi-region note, then a quick cut back to `/world` evolving + title card "Orbis Exchange". | "And DSQL is active-active across regions by design — a player in Oregon and one in Virginia would trade on one consistent world, with zero coordination in our code. That's the million-scale story: not a benchmark, a guarantee. It runs live today on Aurora DSQL — single-region to stay in budget, built to span the globe. Orbis Exchange: one living world, one ledger, and a machine to beat." |
 
 ---
 
 ## Continuous voiceover (read straight through, ~2:50)
 
-> One living world. A grid of resources that grows, spreads, and collapses on its own —
-> no script, just rules. Brightness is abundance — the field you see is the data,
-> evolving in real time. I can zoom right into it.
+> One living world — a grid of resources that grows, spreads, and collapses on its own.
+> No script, just rules: every few seconds the whole field steps forward, dense regions
+> bloom and crowded ones burn out, so scarcity emerges on its own. Brightness is abundance
+> — what you see is the data itself, evolving in real time. And I can zoom right in; every
+> player is looking at the exact same world.
 >
-> No signup — I'm already in, and I can rename myself anytime. I claim a piece of it.
-> That cell is mine now — every few seconds it mines its resource into my inventory and
-> depletes the land. Scarcity is emergent: where the land thins, prices are about to move.
+> I can claim a piece of it. That cell is mine now — every few seconds it mines its
+> resource into my inventory and depletes the land. Scarcity is emergent: where the land
+> thins, prices are about to move.
 >
-> On the right is the other half of the same screen: one global market. One order book
-> per commodity, price-time priority. The map and the book are the same ledger, seen two ways.
+> On the right is the other half of the same screen: one global market — one order book
+> per commodity, price-time priority. The map and the book are the same ledger, seen two
+> ways: what your cells mine shows up here to sell.
 >
-> Trading is one tap. I pick a size, and Buy — it takes the best ask and settles
-> instantly. No price to enter, nothing left resting. One short transaction debited me,
-> paid the seller, moved the inventory, and recorded the trade — with the balance and
-> inventory checks asserted inside that transaction.
+> Watch this. I pick a size and buy — it crosses a resting sell and settles instantly. No
+> price to enter, nothing left resting. One short transaction debited me, paid the seller,
+> moved the inventory, and recorded the trade, with the balance and inventory checks
+> asserted inside that transaction — so it can never double-spend or oversell.
 >
-> Here's the twist: almost none of these orders are people. Market-maker and liquidity
-> bots quote both sides every tick to keep the book alive — and momentum, value and
-> arbitrage bots trade it as first-class players: same order book, same code path I just
-> used, zero inference cost.
+> Here's the twist: almost none of these orders are people. Liquidity bots quote both
+> sides to keep the book alive, and momentum, value and arbitrage bots trade it as
+> first-class players — same order book, same code path I just used, zero inference cost.
+> They're the competition.
 >
-> One leaderboard ranks the real competition — human and AI — by net worth. Which comes
-> down to one question: can you out-trade the machine?
+> One leaderboard ranks everyone — human and AI — by net worth: your credits plus what
+> you're holding at the last price. The bots never sleep, so climbing it means beating
+> them at their own game. Can you out-trade the machine?
 >
 > All of this rests on Amazon Aurora DSQL — the single source of truth. Strongly
-> consistent, so no order can double-spend credits or sell the same unit twice, and
-> there's no reconciliation pass, ever. Three runtimes share one ledger: the Next.js app
-> on Vercel, the simulation heartbeat, and the agents.
+> consistent, with no reconciliation pass, ever. Three runtimes share one ledger: the
+> Next.js app on Vercel, the simulation heartbeat, and the agent workers.
 >
-> And DSQL is active-active across regions by design — a player in Oregon and one in
+> And DSQL is active-active across regions by design — so a player in Oregon and one in
 > Virginia would trade on one consistent world, with zero coordination in our code.
 > That's the million-scale story: not a benchmark, a guarantee.
 >
-> Orbis Exchange — one living world, one ledger, and a machine to beat.
+> It runs live today on Aurora DSQL — single-region to stay in budget, and built to span
+> the globe. Orbis Exchange: one living world, one ledger, and a machine to beat.
 
 ---
 
