@@ -39,7 +39,7 @@ Paste each section from `devpost-submission.md` under the matching Devpost headi
 |---|---|
 | **Live app** | https://orbis-exchange.vercel.app |
 | **GitHub repo** | https://github.com/sgharlow/orbis-exchange |
-| **Demo video** (YouTube/Vimeo, public/unlisted) | _paste after recording — ≤5 min, script: `demo-video-script.md`_ |
+| **Demo video** (YouTube/Vimeo, public/unlisted) | `PASTE-VIDEO-URL` _(record per `demo-video-script.md`, ≤5 min; same token in README + devpost-submission.md)_ |
 
 ## D. Image gallery (upload)
 

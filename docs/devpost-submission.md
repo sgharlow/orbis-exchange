@@ -6,6 +6,9 @@ trade on the exact same strongly-consistent ledger. Can you out-trade the machin
 **Hackathon:** H0 — Hack the Zero Stack with Vercel and AWS Databases · **Track 3:
 Million-scale Global App** · deadline 2026-06-29 5:00pm PDT.
 
+**▶ Live:** https://orbis-exchange.vercel.app · **🎬 Demo video:** PASTE-VIDEO-URL
+<!-- replace the token PASTE-VIDEO-URL with the public YouTube/Vimeo link after recording -->
+
 ---
 
 ## Inspiration
@@ -181,7 +184,7 @@ critical settlement path.
 - [x] Architecture diagram — `docs/architecture.svg` / `docs/architecture.md`.
 - [ ] **3–5 min demo video** — show the world evolving, a trade settling instantly,
       reveal that traders are AI, then the leaderboard + the DSQL/consistency
-      walkthrough. *(record before submit)*
+      walkthrough. *(record before submit; paste the URL over `PASTE-VIDEO-URL` above)*
 - [ ] **Published Vercel project link + Vercel Team ID.** *(app is deployed live at
       https://orbis-exchange.vercel.app — paste the project link + Team ID)*
 - [ ] **Storage screenshots** proving Aurora DSQL usage (cluster + connection
