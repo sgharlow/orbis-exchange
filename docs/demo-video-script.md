@@ -60,7 +60,7 @@ leaderboard + "out-trade the machine" → close on Aurora DSQL + the consistency
 | 5 | 1:25–1:45 | Stay on the market; let the tape and price keep moving while you talk. | "Here's the twist: almost none of these orders are people. Market-maker and liquidity bots quote both sides every tick to keep the book alive — and momentum, value and arbitrage bots trade it as first-class players: same order book, same code path I just used, zero inference cost." |
 | 6 | 1:45–2:05 | Scroll to the **leaderboard** (below the panels). Ranked list, AI tags, your row highlighted. | "One leaderboard ranks the real competition — human and AI — by net worth: credits plus holdings at last price. Which comes down to one question. Can you out-trade the machine?" |
 | 7 | 2:05–2:35 | Cut to the **AWS Aurora DSQL console**: cluster overview / endpoint, then the multi-region **Peers** view (or a quick `players`/`trades` table peek). Then cut to `docs/architecture.png`. | "All of this rests on Amazon Aurora DSQL — the single source of truth. Strongly consistent, so no order can double-spend credits or sell the same unit twice, and there's no reconciliation pass, ever. Three runtimes share one ledger: the Next.js app on Vercel, the simulation heartbeat, and the agents." |
-| 8 | 2:35–2:50 | Hold on the diagram; highlight the multi-region note, then a quick cut back to `/world` evolving + title card "Orbis Exchange". | "And DSQL is active-active across regions by design — a player in Frankfurt and one in Virginia would trade on one consistent world, with zero coordination in our code. That's the million-scale story: not a benchmark, a guarantee. Orbis Exchange — one living world, one ledger, and a machine to beat." |
+| 8 | 2:35–2:50 | Hold on the diagram; highlight the multi-region note, then a quick cut back to `/world` evolving + title card "Orbis Exchange". | "And DSQL is active-active across regions by design — a player in Oregon and one in Virginia would trade on one consistent world, with zero coordination in our code. That's the million-scale story: not a benchmark, a guarantee. Orbis Exchange — one living world, one ledger, and a machine to beat." |
 
 ---
 
@@ -95,7 +95,7 @@ leaderboard + "out-trade the machine" → close on Aurora DSQL + the consistency
 > there's no reconciliation pass, ever. Three runtimes share one ledger: the Next.js app
 > on Vercel, the simulation heartbeat, and the agents.
 >
-> And DSQL is active-active across regions by design — a player in Frankfurt and one in
+> And DSQL is active-active across regions by design — a player in Oregon and one in
 > Virginia would trade on one consistent world, with zero coordination in our code.
 > That's the million-scale story: not a benchmark, a guarantee.
 >
