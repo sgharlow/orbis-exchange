@@ -25,7 +25,10 @@ const AGENTS = [
   { id: "a0000000-0000-0000-0000-0000000000a4", handle: "mm-rare", kind: "market", strategy: "maker", params: { commodity: "rare", size: 5, margin: 2 } },
   { id: "a0000000-0000-0000-0000-0000000000a5", handle: "momentum-ore", kind: "agent", strategy: "momentum", params: { commodity: "ore", size: 3, lookback: 5 } },
   { id: "a0000000-0000-0000-0000-0000000000a6", handle: "value-ore", kind: "agent", strategy: "value", params: { commodity: "ore", size: 3, band: 0.04, lookback: 10 } },
-  { id: "a0000000-0000-0000-0000-0000000000a7", handle: "scout-r0", kind: "agent", strategy: "scout", params: { commodity: "ore", size: 1, region: "r0" } },
+  // scout is a bounded resource SUPPLIER (mines cells -> sells output), not a trading
+  // opponent — kind='market' keeps it off the competitive leaderboard so its mining
+  // income can never look like a runaway, while it still feeds supply into the market.
+  { id: "a0000000-0000-0000-0000-0000000000a7", handle: "scout-r0", kind: "market", strategy: "scout", params: { commodity: "ore", size: 1, region: "r0" } },
   { id: "a0000000-0000-0000-0000-0000000000a8", handle: "arb-bot", kind: "agent", strategy: "arb", params: { commodity: "ore", size: 3, lookback: 10 } },
   { id: "a0000000-0000-0000-0000-0000000000a9", handle: "momentum-energy", kind: "agent", strategy: "momentum", params: { commodity: "energy", size: 3, lookback: 5 } },
   { id: "a0000000-0000-0000-0000-0000000000aa", handle: "momentum-biomass", kind: "agent", strategy: "momentum", params: { commodity: "biomass", size: 3, lookback: 5 } },
