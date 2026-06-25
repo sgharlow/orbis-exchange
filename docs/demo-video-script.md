@@ -16,8 +16,8 @@ leaderboard + "out-trade the machine" → close on Aurora DSQL + the consistency
 > one-tap: **quick-size chips (1 / 5 / 25 / max)** then a **Buy / Sell button that shows
 > the price** (e.g. `Buy 5 · 100 cr`) and always fills — limit orders are tucked behind
 > an "advanced" link. The leaderboard shows the **9 strategy opponents** (momentum ×4,
-> value ×4, arb); the liquidity bots (market-makers + the pulse trader) and the scout
-> **supplier** run the market behind the scenes and are intentionally **off** the board.
+> value ×4, arb); the market-making and liquidity bots run the market behind the scenes
+> and are intentionally **off** the board.
 
 ---
 
@@ -128,8 +128,8 @@ leaderboard + "out-trade the machine" → close on Aurora DSQL + the consistency
 - Keep the cursor deliberate; pause ~1s after each click so the toast and book update
   are legible.
 - The leaderboard intentionally shows only the **strategy opponents** (momentum / value
-  / arb). The makers, the pulse liquidity bot, and the scout supplier run the market but
-  stay off the board — so don't call them out as "competitors"; they're the market.
+  / arb). The market-making and liquidity bots run the market but stay off the board —
+  so don't call them out as "competitors"; they're the market.
 - Storage proof (H0 requirement): in the DSQL console capture (a) the cluster
   overview/endpoint and (b) the multi-region **Peers** tab (or a `players`/`trades`
   table result) — this is the "storage configuration proving AWS database usage."
