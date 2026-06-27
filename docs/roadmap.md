@@ -5,14 +5,13 @@
 > Rebaselined **2026-06-12** (AI cold-start fix); **re-confirmed live 2026-06-22**:
 > `pnpm -r test` = **143 green** — db 55 + web 36 + worker 52; `pnpm -r lint`
 > clean; `next build` exit 0; Lambda
-> bundle builds + smokes. Implementation plan:
-> `docs/superpowers/plans/2026-06-11-complete-hackathon-entry.md` (Part A
-> tasks 1–11 ✅ done; Part B cloud/ship remains). Deadline
+> bundle builds + smokes. Build plan: Part A tasks 1–11 ✅ done;
+> Part B cloud/ship remains. Deadline
 > **2026-06-29 5:00pm PDT** — **18 days out**.
 
 > **Update 2026-06-14 — cloud spine is LIVE (the "Status summary" below is from
 > the 6-12 pass and now understates progress).** Provisioned + live-verified
-> 2026-06-14: Aurora DSQL cluster `wrt3a5l222hyt257qm7qz4peqa` (us-east-1,
+> 2026-06-14: Aurora DSQL cluster `<prod-cluster-id>` (us-east-1,
 > **ACTIVE**, deletion-protection on, migrated 0001–0004 + seeded) · worker
 > Lambda `orbis-tick` deployed (**Active**, nodejs22, **unscheduled by design →
 > $0**) · AWS Budgets `orbis-monthly` $10/mo alert. `pnpm -r test` = **124**
@@ -33,7 +32,7 @@ write-up, How-to-Play PDF, video script) are drafted.
 
 **Cloud is now LIVE (updated 2026-06-22 — this supersedes the 6-12 "nothing
 provisioned" status).** Provisioned + live-verified: Aurora DSQL cluster (ACTIVE,
-migrated 0001–0004; production re-seeded clean 2026-06-22 with 14 agents),
+migrated 0001–0004; production re-seeded clean 2026-06-22 with 18 agents),
 `apps/web` deployed to Vercel at
 https://orbis-exchange.vercel.app, worker `orbis-heartbeat`
 (`rate(1 minute)` → orbis-tick) **ENABLED — the world is advancing**, AWS Budgets
@@ -86,7 +85,7 @@ and oscillate bounded near 100, no drift, no runaway. Details:
 
 ### P0 — Cloud spine (target **June 14**; user-gated AWS/Vercel mutations)
 
-Runbook: `docs/superpowers/runbooks/phase-0-cloud-provisioning.md` (see #6).
+Runbook: `docs/cloud-provisioning.md` (see #6).
 
 1. **Provision Aurora DSQL** (single-region) + `db:migrate` + `db:seed` +
    `db:smoke` against the live cluster.

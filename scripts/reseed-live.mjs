@@ -24,8 +24,6 @@ import path from "node:path";
 
 const REGION = "us-east-1";
 const SCHEDULE = "orbis-heartbeat";
-const LAMBDA_ARN = "arn:aws:lambda:us-east-1:461293170793:function:orbis-tick";
-const ROLE_ARN = "arn:aws:iam::461293170793:role/orbis-scheduler";
 const PROD = "https://orbis-exchange.vercel.app";
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -38,6 +36,14 @@ const AWS_BIN = process.platform === "win32" ? "aws.exe" : "aws";
 function aws(args) {
   return spawnSync(AWS_BIN, args, { encoding: "utf8" });
 }
+// Derive the AWS account from the logged-in schedule owner (this script already
+// requires the AWS CLI authed as that profile) so no account id is hardcoded here.
+// Override with ORBIS_AWS_ACCOUNT_ID to run under a different profile.
+const ACCOUNT =
+  process.env.ORBIS_AWS_ACCOUNT_ID ||
+  aws(["sts", "get-caller-identity", "--query", "Account", "--output", "text"]).stdout?.trim();
+const LAMBDA_ARN = `arn:aws:lambda:${REGION}:${ACCOUNT}:function:orbis-tick`;
+const ROLE_ARN = `arn:aws:iam::${ACCOUNT}:role/orbis-scheduler`;
 function scheduleState() {
   const r = aws(["scheduler", "get-schedule", "--name", SCHEDULE, "--region", REGION, "--query", "State", "--output", "text"]);
   return r.status === 0 ? r.stdout.trim() : null;

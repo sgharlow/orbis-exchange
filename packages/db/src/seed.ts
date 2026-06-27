@@ -94,7 +94,7 @@ async function insertCells(pool: pg.Pool, cells: CellSeed[], batchSize = 500): P
 async function seed(): Promise<void> {
   const pool = createPool();
   try {
-    // The seeded world is a pure algorithmic-agent ecology (the 14 AGENTS below).
+    // The seeded world is a pure algorithmic-agent ecology (the 18 AGENTS below).
     // No placeholder humans are seeded: the only human on the leaderboard is the
     // live participant who joins, which is the "AI vs human on one ledger" reveal.
     for (const c of COMMODITIES) {

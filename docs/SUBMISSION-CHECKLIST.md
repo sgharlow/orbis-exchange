@@ -5,7 +5,7 @@
 **Live app:** https://orbis-exchange.vercel.app
 **This file:** a single requirement→evidence→gap→owner matrix, with **live verification run 2026-06-19**. It complements — does not replace — [`SUBMISSION-STATUS.md`](SUBMISSION-STATUS.md) (ordered remaining steps) and [`devpost-submission.md`](devpost-submission.md) (the prose answers). When they disagree, this file's "Live verification" column is the freshest signal.
 
-> **Bottom line (2026-06-19):** the read path is fully live and healthy in the cloud; all 143 tests green; the UI demo surface is complete. **Every open item is user/interactive** (worker already scheduled/ENABLED → dogfood → multi-region capture → video → Devpost form). No engineering blocker stands between today and submission.
+> **Bottom line:** the read path is fully live and healthy in the cloud; all 143 tests green; the UI demo surface is complete. Demo video published and storage screenshots captured; the **only remaining step is the Devpost form submission**. No engineering blocker stands between today and submission.
 
 ---
 
@@ -37,9 +37,9 @@ Probed the deployed app at https://orbis-exchange.vercel.app (anonymous / logged
 |---|---|---|---|---|
 | 1 | Text description names **Amazon Aurora DSQL** as the database | ✅ done | `devpost-submission.md` ("How we built it" → hero = Aurora DSQL) | — |
 | 2 | Architecture diagram | ✅ done (verify export) | `docs/architecture.md` + `architecture.svg`; **confirm a `architecture.png` exists for Devpost upload** (devpost-submission §checklist references `architecture.png`) | Steve |
-| 3 | **3–5 min demo video** (world evolving → trade settles → reveal AI traders → leaderboard → DSQL/consistency close) | ❌ not recorded | Script ready: `demo-video-script.md`. **Record against the live app AFTER scheduling the worker.** Publish public/unlisted-public, ≤5 min hard cap | Steve |
+| 3 | **3–5 min demo video** (world evolving → trade settles → reveal AI traders → leaderboard → DSQL/consistency close) | ✅ published | https://youtu.be/beOVLYmNv0w (≤5 min, public); script `demo-video-script.md` | Steve |
 | 4 | **Published Vercel project link + Vercel Team ID** | ⏳ partial | Live URL ✅ proven. **Paste the Vercel project link + Team ID into `devpost-submission.md` + the Devpost form** | Steve |
-| 5 | **Storage screenshots** proving Aurora DSQL usage (cluster + connection config) | ❌ not captured | Capture during multi-region stand-up (step B-5 of SUBMISSION-STATUS); runbook `docs/superpowers/runbooks/phase-0-cloud-provisioning.md` | Steve |
+| 5 | **Storage screenshots** proving Aurora DSQL usage (cluster + connection config) | ✅ captured | `docs/gallery/orbis-dsql-us-east-1.jpg` + `docs/gallery/orbis-dsql-us-west-2.jpg` (active-active pair, both regions' Peers tabs); runbook `docs/cloud-provisioning.md` | Steve |
 | 6 | Every submitted link opens **logged-out / incognito** | ⏳ re-verify pre-submit | Live app already serves anonymous (verified this session). Re-check video + Vercel links incognito the morning of 6-29 | Steve |
 | 7 | **Bonus (+≤0.6 Stage-2):** build write-up before 6-29 w/ `#H0Hackathon` + required attribution | ❌ not published | Draft ready: `docs/blog-post.md`. Paste to Dev.to/Medium, confirm attribution wording vs Official Rules, add live URL back into `devpost-submission.md` | Steve |
 

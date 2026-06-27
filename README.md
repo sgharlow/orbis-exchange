@@ -6,9 +6,9 @@ same strongly-consistent ledger.** Can you out-trade the machine?
 > H0 — Hack the Zero Stack with Vercel and AWS Databases · **Track 3: Million-scale
 > Global App.** Hero database: **Amazon Aurora DSQL.** Frontend: **Next.js on Vercel.**
 
-**▶ Live:** https://orbis-exchange.vercel.app · **🎬 Demo video:** PASTE-VIDEO-URL <!-- replace the token PASTE-VIDEO-URL with the public YouTube/Vimeo link after recording -->
+**▶ Live:** https://orbis-exchange.vercel.app · **🎬 Demo video:** https://youtu.be/beOVLYmNv0w
 
-> **Submission status:** engineering complete · cloud **LIVE** (Aurora DSQL active, world ticking) · **143 tests green** (db 55 · web 36 · worker 52) · `next build` clean. Only user/interactive capture + submit remains. Turnkey paste sheet: [`docs/DEVPOST-PASTE-MAP.md`](docs/DEVPOST-PASTE-MAP.md). Ordered cliff-day path: [`docs/SUBMISSION-STATUS.md`](docs/SUBMISSION-STATUS.md).
+> **Submission status:** engineering complete · cloud **LIVE** (Aurora DSQL active, world ticking) · **143 tests green** (db 55 · web 36 · worker 52) · `next build` clean. Demo video recorded; only the Devpost form submission remains. Turnkey paste sheet: [`docs/DEVPOST-PASTE-MAP.md`](docs/DEVPOST-PASTE-MAP.md). Ordered cliff-day path: [`docs/SUBMISSION-STATUS.md`](docs/SUBMISSION-STATUS.md).
 
 A 64×64 resource world evolves every tick by cellular-automaton rules — regions
 bloom and collapse, so scarcity is *emergent*, never authored. One global order
@@ -41,8 +41,8 @@ Three runtimes share **one database as the single source of truth**:
 | Runtime | Role |
 |---|---|
 | **Next.js on Vercel** | World view + market panel; route handlers (`/api/orders`, `/api/claims`); SSE `/api/stream` |
-| **Amazon Aurora DSQL** | Canonical world + ledger; strongly consistent; multi-region active-active |
-| **Simulation + agent worker** | 3s heartbeat: CA tick (delta-persist) · mining · matching/settlement · agents |
+| **Amazon Aurora DSQL** | Canonical world + ledger; strongly consistent; active-active multi-region by design (single-region in production) |
+| **Simulation + agent worker** | 3s heartbeat (1-min cadence in the cost-bounded cloud demo): CA tick (delta-persist) · mining · matching/settlement · agents |
 
 Settlement enforces every invariant with **conditional writes** (e.g.
 `UPDATE players SET credits = credits - cost WHERE credits >= cost`) — DSQL is
@@ -76,7 +76,7 @@ DATABASE_URL=postgres://orbis:orbis@localhost:5434/orbis pnpm --filter @orbis/wo
 Open **http://localhost:3000** — you're auto-joined as a guest and redirected to
 `/world`; click a cell to claim it (up to 12 cells per player). Tests: `pnpm -r test`
 (needs Docker up) — **143 green** (db 55 · web 36 · worker 52). Cloud (Aurora DSQL +
-Vercel): `docs/superpowers/runbooks/phase-0-cloud-provisioning.md`.
+Vercel): `docs/cloud-provisioning.md`.
 
 ## Stack
 

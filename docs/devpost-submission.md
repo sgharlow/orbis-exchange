@@ -6,8 +6,7 @@ trade on the exact same strongly-consistent ledger. Can you out-trade the machin
 **Hackathon:** H0 — Hack the Zero Stack with Vercel and AWS Databases · **Track 3:
 Million-scale Global App** · deadline 2026-06-29 5:00pm PDT.
 
-**▶ Live:** https://orbis-exchange.vercel.app · **🎬 Demo video:** PASTE-VIDEO-URL
-<!-- replace the token PASTE-VIDEO-URL with the public YouTube/Vimeo link after recording -->
+**▶ Live:** https://orbis-exchange.vercel.app · **🎬 Demo video:** https://youtu.be/beOVLYmNv0w
 
 ---
 
@@ -184,9 +183,9 @@ critical settlement path.
 
 - [x] Text description names **Amazon Aurora DSQL** as the database.
 - [x] Architecture diagram — `docs/architecture.svg` / `docs/architecture.md`.
-- [ ] **3–5 min demo video** — show the world evolving, a trade settling instantly,
-      reveal that traders are AI, then the leaderboard + the DSQL/consistency
-      walkthrough. *(record before submit; paste the URL over `PASTE-VIDEO-URL` above)*
+- [x] **3–5 min demo video** — world evolving, a trade settling instantly, reveal
+      that traders are AI, then the leaderboard + the DSQL/consistency walkthrough.
+      **Published:** https://youtu.be/beOVLYmNv0w
 - [ ] **Published Vercel project link + Vercel Team ID.** *(app is deployed live at
       https://orbis-exchange.vercel.app — paste the project link + Team ID)*
 - [x] **Storage screenshots** proving Aurora DSQL usage — `docs/gallery/orbis-dsql-us-east-1.jpg`
@@ -208,5 +207,5 @@ critical settlement path.
 > the worker `orbis-heartbeat` (rate(1 min) → orbis-tick) is **enabled — the world
 > is advancing**. The site is public (no login wall) and auto-joins visitors as
 > guests. **Storage screenshots are DONE** (`docs/gallery/orbis-dsql-{us-east-1,us-west-2}.jpg`,
-> also spliced into the demo video). Remaining before submit: the **demo-video
-> voiceover** and the **Devpost form**.
+> also spliced into the demo video). The demo video is published
+> (https://youtu.be/beOVLYmNv0w); remaining before submit: the **Devpost form**.
