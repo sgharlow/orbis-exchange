@@ -2,7 +2,7 @@
   "name": "orbis-exchange",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": { "node": "24.x" },
   "packageManager": "pnpm@10.24.0",
   "scripts": {
     "db:migrate": "pnpm --filter @orbis/db migrate",
