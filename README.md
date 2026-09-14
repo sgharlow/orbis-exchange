@@ -1,5 +1,15 @@
 # Orbis Exchange
 
+> # ⛔ SHUT DOWN 2026-09-14 (Steve's ruling at the 2026-09-13 /daily-priority)
+> The Vercel project `orbis-exchange` is **paused** (production answers `503 DEPLOYMENT_PAUSED`;
+> rollback = unpause) and the `orbis-vercel` IAM access key is **inactive** (rollback = re-activate).
+> It had been serving 503 on `/api/health` and an error page on `/world` since ~2026-08-06: the
+> Aurora DSQL cluster host no longer resolved (`getaddrinfo ENOTFOUND <cluster>.dsql.us-east-1.on.aws`),
+> i.e. the hero database was gone while the site stayed up. Found by the post-deploy probe of the
+> 2026-09-14 Next.js security bump (PR #1). No Lambda or EventBridge rule remains in the account.
+> The code, tests and docs stay as the hackathon record ("H0 — Hack the Zero Stack", 2026-06).
+> Every "Live" / "cloud LIVE" claim below is historical.
+
 **A single living world. One global market. AI and humans trading on the exact
 same strongly-consistent ledger.** Can you out-trade the machine?
 
